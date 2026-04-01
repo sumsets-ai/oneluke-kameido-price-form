@@ -1,0 +1,1814 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>概算料金のご案内｜ワンルーク江東区亀戸店</title>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --brand: #0ABAB5;
+    --brand-dark: #089490;
+    --brand-light: #e6fafa;
+    --brand-pale: #f2fdfd;
+    --text: #2c2c2c;
+    --text-light: #666;
+    --border: #d0eceb;
+    --bg: #f7fffe;
+    --white: #ffffff;
+    --error: #e05252;
+    --shadow: 0 2px 16px rgba(10,186,181,0.10);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'Noto Sans JP', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding-bottom: 40px;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: var(--white);
+    border-bottom: 3px solid var(--brand);
+    padding: 16px 20px;
+    text-align: center;
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    box-shadow: 0 2px 8px rgba(10,186,181,0.08);
+  }
+  header .logo-area { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  header .paw { font-size: 1.6rem; }
+  header h1 { font-size: 1.05rem; font-weight: 700; color: var(--brand-dark); letter-spacing: 0.02em; }
+  header p { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
+
+  /* ─── PROGRESS BAR ─── */
+  .progress-wrap { background: var(--white); padding: 12px 20px 0; border-bottom: 1px solid var(--border); }
+  .progress-steps { display: flex; justify-content: center; gap: 0; max-width: 340px; margin: 0 auto 12px; }
+  .step {
+    flex: 1; text-align: center; font-size: 0.65rem; color: #bbb;
+    position: relative; padding-top: 28px;
+  }
+  .step::before {
+    content: attr(data-num);
+    position: absolute; top: 0; left: 50%; transform: translateX(-50%);
+    width: 22px; height: 22px; border-radius: 50%;
+    background: #ddd; color: #fff; font-size: 0.72rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.3s;
+  }
+  .step::after {
+    content: '';
+    position: absolute; top: 11px; left: calc(50% + 11px);
+    width: calc(100% - 22px); height: 2px;
+    background: #ddd; transition: background 0.3s;
+  }
+  .step:last-child::after { display: none; }
+  .step.active::before { background: var(--brand); }
+  .step.active { color: var(--brand-dark); font-weight: 700; }
+  .step.done::before { background: var(--brand); content: '✓'; }
+  .step.done::after { background: var(--brand); }
+
+  /* ─── MAIN CARD ─── */
+  main { padding: 16px; max-width: 520px; margin: 0 auto; }
+
+  .card {
+    background: var(--white);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    padding: 24px 20px;
+    margin-bottom: 16px;
+  }
+  .card-title {
+    font-size: 1rem; font-weight: 700; color: var(--brand-dark);
+    margin-bottom: 16px; padding-bottom: 10px;
+    border-bottom: 2px solid var(--brand-light);
+    display: flex; align-items: center; gap: 8px;
+  }
+
+  /* ─── LABELS & INPUTS ─── */
+  .field { margin-bottom: 20px; }
+  .field:last-child { margin-bottom: 0; }
+  label.field-label {
+    display: block; font-size: 0.82rem; font-weight: 700;
+    color: var(--text); margin-bottom: 6px;
+  }
+  label.field-label .required {
+    display: inline-block; background: var(--brand); color: #fff;
+    font-size: 0.65rem; padding: 1px 6px; border-radius: 4px;
+    margin-left: 6px; vertical-align: middle;
+  }
+  label.field-label .optional {
+    display: inline-block; background: #ddd; color: #666;
+    font-size: 0.65rem; padding: 1px 6px; border-radius: 4px;
+    margin-left: 6px; vertical-align: middle;
+  }
+
+  input[type="text"], input[type="number"], input[type="date"], select {
+    width: 100%; padding: 11px 14px; border: 2px solid var(--border);
+    border-radius: 10px; font-size: 0.9rem; font-family: inherit;
+    background: var(--white); color: var(--text);
+    transition: border 0.2s, box-shadow 0.2s;
+    -webkit-appearance: none;
+  }
+  input:focus, select:focus {
+    outline: none; border-color: var(--brand);
+    box-shadow: 0 0 0 3px rgba(10,186,181,0.12);
+  }
+  input.error, select.error { border-color: var(--error); }
+  .error-msg { color: var(--error); font-size: 0.75rem; margin-top: 4px; }
+
+  /* ─── RADIO / CHECKBOX ─── */
+  .radio-group, .check-group { display: flex; flex-direction: column; gap: 8px; }
+  .radio-group.horizontal { flex-direction: row; flex-wrap: wrap; gap: 8px; }
+
+  .radio-btn, .check-btn {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 11px 14px; border: 2px solid var(--border); border-radius: 10px;
+    cursor: pointer; transition: border 0.2s, background 0.2s;
+    background: var(--white);
+  }
+  .radio-btn:has(input:checked), .check-btn:has(input:checked) {
+    border-color: var(--brand); background: var(--brand-pale);
+  }
+  .radio-btn input, .check-btn input { margin-top: 2px; accent-color: var(--brand); flex-shrink: 0; }
+  .radio-btn .btn-text, .check-btn .btn-text { flex: 1; }
+  .radio-btn .btn-label, .check-btn .btn-label { font-size: 0.88rem; font-weight: 500; }
+  .radio-btn .btn-desc, .check-btn .btn-desc { font-size: 0.75rem; color: var(--text-light); margin-top: 2px; }
+  .check-btn .btn-price { font-size: 0.78rem; color: var(--brand-dark); font-weight: 700; margin-top: 2px; }
+
+  /* category big buttons */
+  .cat-group { display: flex; flex-direction: column; gap: 10px; }
+  .cat-btn {
+    display: flex; align-items: center; gap: 14px;
+    padding: 16px 18px; border: 2px solid var(--border); border-radius: 14px;
+    cursor: pointer; transition: all 0.2s; background: var(--white);
+  }
+  .cat-btn:has(input:checked) { border-color: var(--brand); background: var(--brand-pale); }
+  .cat-btn input { accent-color: var(--brand); width: 18px; height: 18px; flex-shrink: 0; }
+  .cat-btn .cat-icon { font-size: 1.8rem; }
+  .cat-btn .cat-text .cat-main { font-size: 0.95rem; font-weight: 700; }
+  .cat-btn .cat-text .cat-sub { font-size: 0.73rem; color: var(--text-light); margin-top: 2px; }
+
+  /* ─── SECTION HIDDEN ─── */
+  .section-hidden { display: none; }
+
+  /* ─── DATETIME ROW ─── */
+  .datetime-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .datetime-row select { font-size: 0.82rem; padding: 10px 10px; }
+
+  /* ─── INFO BOX ─── */
+  .info-box {
+    background: var(--brand-light); border-left: 4px solid var(--brand);
+    padding: 10px 14px; border-radius: 0 8px 8px 0;
+    font-size: 0.78rem; color: var(--brand-dark); margin-top: 8px;
+    line-height: 1.6;
+  }
+
+  /* ─── BUTTONS ─── */
+  .btn-primary {
+    width: 100%; padding: 16px; background: var(--brand); color: #fff;
+    border: none; border-radius: 12px; font-size: 1rem; font-weight: 700;
+    font-family: inherit; cursor: pointer; letter-spacing: 0.04em;
+    transition: background 0.2s, transform 0.1s;
+  }
+  .btn-primary:active { transform: scale(0.98); }
+  .btn-primary:hover { background: var(--brand-dark); }
+  .btn-secondary {
+    width: 100%; padding: 14px; background: var(--white); color: var(--brand-dark);
+    border: 2px solid var(--brand); border-radius: 12px; font-size: 0.92rem; font-weight: 700;
+    font-family: inherit; cursor: pointer; transition: background 0.2s;
+  }
+  .btn-secondary:hover { background: var(--brand-pale); }
+
+  /* ─── CONFIRM SCREEN ─── */
+  .confirm-table { width: 100%; border-collapse: collapse; }
+  .confirm-table tr { border-bottom: 1px solid var(--border); }
+  .confirm-table th {
+    width: 36%; padding: 10px 8px; font-size: 0.78rem; color: var(--text-light);
+    font-weight: 500; vertical-align: top; text-align: left;
+  }
+  .confirm-table td {
+    padding: 10px 8px; font-size: 0.88rem; font-weight: 500; vertical-align: top;
+  }
+
+  /* ─── DONE SCREEN ─── */
+  .done-icon { font-size: 3.5rem; text-align: center; margin: 8px 0; }
+  .done-title { text-align: center; font-size: 1.1rem; font-weight: 700; color: var(--brand-dark); margin-bottom: 8px; }
+  .done-msg { text-align: center; font-size: 0.85rem; color: var(--text-light); line-height: 1.7; }
+
+  /* ─── DISCLAIMER ─── */
+  .disclaimer {
+    font-size: 0.72rem; color: var(--text-light); line-height: 1.7;
+    padding: 12px 16px; background: #f5f5f5; border-radius: 8px;
+    margin-bottom: 16px;
+  }
+
+  /* ─── INLINE VALIDATION ERRORS ─── */
+  .field-error-msg {
+    display: none; color: var(--error); font-size: 0.78rem;
+    margin-top: 6px; font-weight: 500;
+  }
+  .field-error-msg.show { display: flex; align-items: center; gap: 4px; }
+  .field.has-error > input,
+  .field.has-error > .datetime-row input,
+  .field.has-error > .datetime-row select {
+    border-color: var(--error) !important;
+    box-shadow: 0 0 0 3px rgba(224,82,82,0.10);
+  }
+  .field.has-error .breed-search-wrap input {
+    border-color: var(--error) !important;
+  }
+  .field.has-error .radio-group .radio-btn,
+  .field.has-error .check-group .check-btn {
+    border-color: var(--error) !important;
+  }
+  .field.has-error > label.field-label { color: var(--error); }
+
+  /* ─── ESTIMATE BADGE ─── */
+  .estimate-badge {
+    display: inline-block; background: #ff8c00; color: #fff;
+    font-size: 0.6rem; font-weight: 700; padding: 1px 5px;
+    border-radius: 4px; margin-left: 4px; vertical-align: middle;
+    letter-spacing: 0.02em;
+  }
+
+  /* ─── BREED INCREMENTAL SEARCH ─── */
+  .breed-search-wrap { position: relative; }
+  .breed-search-input-row { display: flex; align-items: center; gap: 8px; }
+  .breed-selected-tag {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--brand-pale); border: 2px solid var(--brand);
+    border-radius: 10px; padding: 10px 14px; margin-top: 6px;
+    font-size: 0.9rem; font-weight: 700; color: var(--brand-dark);
+  }
+  .breed-clear-btn {
+    background: none; border: none; cursor: pointer;
+    color: var(--text-light); font-size: 1rem; padding: 0 0 0 8px; line-height: 1;
+  }
+  .breed-dropdown {
+    position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+    background: var(--white); border: 2px solid var(--brand);
+    border-radius: 12px; z-index: 50; max-height: 240px; overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(10,186,181,0.15);
+  }
+  .breed-option {
+    padding: 12px 16px; font-size: 0.88rem; cursor: pointer;
+    border-bottom: 1px solid var(--border); transition: background 0.15s;
+  }
+  .breed-option:last-child { border-bottom: none; }
+  .breed-option:hover, .breed-option:active { background: var(--brand-pale); }
+  .breed-option-mix {
+    color: var(--brand-dark); font-weight: 700;
+    border-top: 1px solid var(--border); background: var(--brand-light);
+  }
+  .breed-option-mix:hover { background: var(--brand-pale); }
+  .breed-no-match {
+    margin-top: 10px; padding: 12px 14px;
+    background: #fff8e1; border: 2px solid #ffc107;
+    border-radius: 10px; font-size: 0.82rem; line-height: 1.7; color: #5d4037;
+  }
+  .breed-no-match a { color: var(--brand-dark); font-weight: 700; }
+
+  /* ─── MIX BREED SELECTOR ─── */
+  .mix-note {
+    display: flex; gap: 8px; align-items: flex-start;
+    background: var(--brand-light); border-radius: 10px;
+    padding: 10px 12px; margin-top: 10px;
+    font-size: 0.78rem; color: var(--brand-dark); line-height: 1.6;
+  }
+  .mix-note small { color: var(--text-light); display: block; margin-top: 2px; }
+  .breed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .breed-check-btn {
+    display: flex; align-items: center; gap: 6px;
+    padding: 9px 10px; border: 2px solid var(--border); border-radius: 8px;
+    cursor: pointer; transition: all 0.2s; background: var(--white);
+    font-size: 0.8rem; font-family: inherit; font-weight: 500;
+  }
+  .breed-check-btn:has(input:checked) { border-color: var(--brand); background: var(--brand-pale); font-weight: 700; }
+  .breed-check-btn.disabled { opacity: 0.35; pointer-events: none; }
+  .breed-check-btn input { accent-color: var(--brand); flex-shrink: 0; }
+  .mix-selected-display {
+    margin-top: 10px; font-size: 0.85rem; font-weight: 700;
+    color: var(--brand-dark); min-height: 20px; text-align: center;
+  }
+
+  /* ─── LOADING ─── */
+  .loading-overlay {
+    display: none; position: fixed; inset: 0;
+    background: rgba(255,255,255,0.85); z-index: 100;
+    align-items: center; justify-content: center; flex-direction: column; gap: 16px;
+  }
+  .loading-overlay.show { display: flex; }
+  .spinner {
+    width: 44px; height: 44px; border: 4px solid var(--brand-light);
+    border-top-color: var(--brand); border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .loading-overlay p { font-size: 0.88rem; color: var(--brand-dark); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-overlay" id="loading">
+  <div class="spinner"></div>
+  <p>送信中です…</p>
+</div>
+
+<!-- HEADER -->
+<header>
+  <div class="logo-area">
+    <span class="paw">🐾</span>
+    <div>
+      <h1>ワンルーク江東区亀戸店</h1>
+      <p>概算料金のご案内フォーム</p>
+    </div>
+  </div>
+</header>
+
+<!-- PROGRESS -->
+<div class="progress-wrap">
+  <div class="progress-steps">
+    <div class="step active" data-num="1">種類選択</div>
+    <div class="step" data-num="2">詳細入力</div>
+    <div class="step" data-num="3">確認</div>
+    <div class="step" data-num="4">完了</div>
+  </div>
+</div>
+
+<main>
+
+  <!-- ════════════════════════════════
+       SCREEN 1：カテゴリ選択
+  ════════════════════════════════ -->
+  <div id="screen-category">
+    <div class="card">
+      <div class="card-title">🐶 ご利用のサービスを選んでください</div>
+      <div class="cat-group">
+        <label class="cat-btn">
+          <input type="radio" name="category" value="trimming">
+          <span class="cat-icon">✂️</span>
+          <span class="cat-text">
+            <span class="cat-main">トリミング</span>
+            <span class="cat-sub">カット・シャンプー・オプション</span>
+          </span>
+        </label>
+        <label class="cat-btn">
+          <input type="radio" name="category" value="hotel">
+          <span class="cat-icon">🏨</span>
+          <span class="cat-text">
+            <span class="cat-main">ホテル（お泊まり・一時預かり）</span>
+            <span class="cat-sub">宿泊・デイケア</span>
+          </span>
+        </label>
+        <label class="cat-btn">
+          <input type="radio" name="category" value="combined">
+          <span class="cat-icon">🐾</span>
+          <span class="cat-text">
+            <span class="cat-main">ホテル＋トリミング両方</span>
+            <span class="cat-sub">宿泊中のトリミング（5%OFF）</span>
+          </span>
+        </label>
+      </div>
+      <div id="cat-error" class="error-msg" style="margin-top:8px;display:none;">サービスを選択してください</div>
+    </div>
+    <button class="btn-primary" onclick="goToDetail()">次へ　→</button>
+  </div>
+
+  <!-- ════════════════════════════════
+       SCREEN 2：詳細入力
+  ════════════════════════════════ -->
+  <div id="screen-detail" class="section-hidden">
+
+    <!-- ── トリミング項目 ── -->
+    <div id="section-trimming" class="section-hidden">
+      <!-- 猫選択時のグレーアウトオーバーレイ -->
+      <div id="trimming-cat-block" style="display:none;">
+        <div class="info-box" style="background:#fff0f0;border-color:#e05252;color:#c0392b;margin-bottom:12px;border-radius:10px;padding:14px;">
+          🐈 猫のトリミングはお電話にてご相談ください。<br>
+          <strong><a href="tel:050-8893-0169" style="color:#c0392b;">📞 050-8893-0169</a></strong>（8:30〜20:30・年中無休）
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">✂️ トリミングの詳細</div>
+
+        <div class="field" id="field-dog-breed">
+          <label class="field-label">犬種 <span class="required">必須</span></label>
+
+          <div class="breed-search-wrap">
+            <!-- 検索入力 -->
+            <input type="text" id="dog_breed_input"
+              placeholder="犬種を入力（例：トイ、ポメ、マルプー）"
+              oninput="onBreedSearch(this.value)"
+              oncompositionend="setTimeout(()=>onBreedSearch(this.value),0)"
+              onfocus="onBreedFocus()"
+              autocomplete="off"
+              style="margin-bottom:0;">
+            <!-- 実際に送信される値（非表示） -->
+            <input type="hidden" id="dog_breed">
+
+            <!-- 選択済みタグ -->
+            <div id="breed-selected" class="breed-selected-tag" style="display:none;">
+              <span id="breed-selected-text"></span>
+              <button type="button" class="breed-clear-btn" onclick="clearBreedSelection()" aria-label="選択解除">✕ 変更</button>
+            </div>
+
+            <!-- ドロップダウン候補 -->
+            <div id="breed-dropdown" class="breed-dropdown" style="display:none;"></div>
+
+            <!-- 該当なしメッセージ -->
+            <div id="breed-no-match" class="breed-no-match" style="display:none;">
+              一致する犬種が見つかりませんでした🙇<br>
+              お手数ですがお電話にてお問い合わせください。<br>
+              <a href="tel:050-8893-0169">📞 050-8893-0169</a>（8:30〜20:30・年中無休）
+            </div>
+          </div>
+
+          <!-- ミックス犬種選択（ミックス犬を選んだときのみ表示） -->
+          <div id="mix-breed-selector" style="display:none; margin-top:10px;">
+            <div class="mix-note">
+              <span>🐾</span>
+              <span>何と何のミックスか選んでください（最大2犬種）<br>
+              <small>リストにない犬種や3犬種以上の混血の場合は、お電話にてご確認ください（050-8893-0169）</small></span>
+            </div>
+            <div class="breed-grid" id="breed-grid"></div>
+            <div id="mix-selected-display" class="mix-selected-display"></div>
+          </div>
+          <p class="field-error-msg" id="err-dog_breed"></p>
+        </div>
+
+        <div class="field" id="field-course">
+          <label class="field-label">コース <span class="required">必須</span></label>
+          <div class="radio-group" id="course-group">
+            <label class="radio-btn">
+              <input type="radio" name="course_type" value="カットコース">
+              <span class="btn-text">
+                <span class="btn-label">カットコース</span>
+                <span class="btn-desc" style="display:block; margin-top:3px;">シャンプーコース＋カット</span>
+              </span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="course_type" value="シャンプーコース">
+              <span class="btn-text">
+                <span class="btn-label">シャンプーコース</span>
+                <span class="btn-desc" style="display:block; margin-top:3px;">爪切り・耳掃除・肛門腺絞り・足裏バリカンを含む</span>
+              </span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="course_type" value="単品オプションのみ">
+              <span class="btn-text"><span class="btn-label">単品オプションのみ</span></span>
+            </label>
+          </div>
+          <p class="field-error-msg" id="err-course"></p>
+        </div>
+
+        <div class="field">
+          <label class="field-label">追加オプション <span class="optional">任意・複数可</span></label>
+          <div class="check-group">
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="はみがき">
+              <span class="btn-text"><span class="btn-label">はみがき</span><span class="btn-price">+550円</span></span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="爪切り">
+              <span class="btn-text"><span class="btn-label">爪切り</span><span class="btn-price">+550円</span></span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="肛門腺絞り">
+              <span class="btn-text"><span class="btn-label">肛門腺絞り</span><span class="btn-price">+550円</span></span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="足裏バリカン">
+              <span class="btn-text"><span class="btn-label">足裏バリカン</span><span class="btn-price">+550円</span></span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="耳掃除">
+              <span class="btn-text"><span class="btn-label">耳掃除</span><span class="btn-price">+550円</span></span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="部分カット">
+              <span class="btn-text">
+                <span class="btn-label">部分カット <span class="estimate-badge">概算</span></span>
+                <span class="btn-price">+550円〜</span>
+                <span class="btn-desc">目安：15分ほど。毛量により変動します</span>
+              </span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="炭酸泉シャワー">
+              <span class="btn-text"><span class="btn-label">炭酸泉シャワー</span><span class="btn-price">+1,100円</span></span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="薬用シャンプー">
+              <span class="btn-text"><span class="btn-label">薬用シャンプー</span><span class="btn-price">+580円</span></span>
+            </label>
+            <label class="check-btn">
+              <input type="checkbox" name="options" value="顔カット">
+              <span class="btn-text">
+                <span class="btn-label">顔カット <span class="estimate-badge">概算</span></span>
+                <span class="btn-price">+1,650円〜</span>
+                <span class="btn-desc">毛量・スタイルにより変動します</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field-label">エステコース <span class="optional">任意・1つだけ</span></label>
+          <div class="radio-group">
+            <label class="radio-btn">
+              <input type="radio" name="este_courses" value="なし">
+              <span class="btn-text"><span class="btn-label">希望しない</span></span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="este_courses" value="ふわふわエステコース">
+              <span class="btn-text"><span class="btn-label">ふわふわエステコース ⭐人気No.1</span><span class="btn-price">+1,960円</span></span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="este_courses" value="皮膚ケアコース">
+              <span class="btn-text"><span class="btn-label">皮膚ケアコース</span><span class="btn-price">+1,390円</span></span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="este_courses" value="スペシャル消臭コース">
+              <span class="btn-text"><span class="btn-label">スペシャル消臭コース</span><span class="btn-price">+1,730円</span></span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="este_courses" value="シルク泡パックコース">
+              <span class="btn-text"><span class="btn-label">シルク泡パックコース</span><span class="btn-price">+1,730円</span></span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="este_courses" value="ジェルパックコース">
+              <span class="btn-text"><span class="btn-label">ジェルパックコース</span><span class="btn-price">+1,730円</span></span>
+            </label>
+            <label class="radio-btn">
+              <input type="radio" name="este_courses" value="極上エステコース">
+              <span class="btn-text"><span class="btn-label">極上エステコース</span><span class="btn-price">+2,650円</span></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2頭目トリミング（combined + 2名以上のときのみ表示） -->
+      <div id="section-trimming-2" class="section-hidden">
+        <div class="card">
+          <div class="card-title">✂️ 2頭目のトリミング詳細</div>
+
+          <div class="field" id="field-dog-breed-2">
+            <label class="field-label">2頭目の犬種 <span class="required">必須</span></label>
+            <div class="breed-search-wrap">
+              <input type="text" id="dog_breed_input_2"
+                placeholder="犬種を入力（例：トイ、ポメ、マルプー）"
+                oninput="onBreedSearch2(this.value)"
+                oncompositionend="setTimeout(()=>onBreedSearch2(this.value),0)"
+                onfocus="onBreedFocus2()"
+                autocomplete="off" style="margin-bottom:0;">
+              <input type="hidden" id="dog_breed_2">
+              <div id="breed-selected-2" class="breed-selected-tag" style="display:none;">
+                <span id="breed-selected-text-2"></span>
+                <button type="button" class="breed-clear-btn" onclick="clearBreedSelection2()" aria-label="選択解除">✕ 変更</button>
+              </div>
+              <div id="breed-dropdown-2" class="breed-dropdown" style="display:none;"></div>
+              <div id="breed-no-match-2" class="breed-no-match" style="display:none;">
+                一致する犬種が見つかりませんでした🙇<br>
+                お手数ですがお電話にてお問い合わせください。<br>
+                <a href="tel:050-8893-0169">📞 050-8893-0169</a>（8:30〜20:30・年中無休）
+              </div>
+            </div>
+            <p class="field-error-msg" id="err-dog_breed_2"></p>
+          </div>
+
+          <div class="field" id="field-course-2">
+            <label class="field-label">コース <span class="required">必須</span></label>
+            <div class="radio-group">
+              <label class="radio-btn">
+                <input type="radio" name="course_type_2" value="カットコース">
+                <span class="btn-text">
+                  <span class="btn-label">カットコース</span>
+                  <span class="btn-desc" style="display:block;margin-top:3px;">シャンプーコース＋カット</span>
+                </span>
+              </label>
+              <label class="radio-btn">
+                <input type="radio" name="course_type_2" value="シャンプーコース">
+                <span class="btn-text">
+                  <span class="btn-label">シャンプーコース</span>
+                  <span class="btn-desc" style="display:block;margin-top:3px;">爪切り・耳掃除・肛門腺絞り・足裏バリカンを含む</span>
+                </span>
+              </label>
+              <label class="radio-btn">
+                <input type="radio" name="course_type_2" value="単品オプションのみ">
+                <span class="btn-text"><span class="btn-label">単品オプションのみ</span></span>
+              </label>
+            </div>
+            <p class="field-error-msg" id="err-course-2"></p>
+          </div>
+
+          <div class="field">
+            <label class="field-label">追加オプション <span class="optional">任意・複数可</span></label>
+            <div class="check-group">
+              <label class="check-btn"><input type="checkbox" name="options_2" value="はみがき"><span class="btn-text"><span class="btn-label">はみがき</span><span class="btn-price">+550円</span></span></label>
+              <label class="check-btn"><input type="checkbox" name="options_2" value="爪切り"><span class="btn-text"><span class="btn-label">爪切り</span><span class="btn-price">+550円</span></span></label>
+              <label class="check-btn"><input type="checkbox" name="options_2" value="肛門腺絞り"><span class="btn-text"><span class="btn-label">肛門腺絞り</span><span class="btn-price">+550円</span></span></label>
+              <label class="check-btn"><input type="checkbox" name="options_2" value="足裏バリカン"><span class="btn-text"><span class="btn-label">足裏バリカン</span><span class="btn-price">+550円</span></span></label>
+              <label class="check-btn"><input type="checkbox" name="options_2" value="耳掃除"><span class="btn-text"><span class="btn-label">耳掃除</span><span class="btn-price">+550円</span></span></label>
+              <label class="check-btn"><input type="checkbox" name="options_2" value="炭酸泉シャワー"><span class="btn-text"><span class="btn-label">炭酸泉シャワー</span><span class="btn-price">+1,100円</span></span></label>
+              <label class="check-btn"><input type="checkbox" name="options_2" value="薬用シャンプー"><span class="btn-text"><span class="btn-label">薬用シャンプー</span><span class="btn-price">+580円</span></span></label>
+            </div>
+          </div>
+
+          <div class="field">
+            <label class="field-label">エステコース <span class="optional">任意・1つだけ</span></label>
+            <div class="radio-group">
+              <label class="radio-btn"><input type="radio" name="este_courses_2" value="なし"><span class="btn-text"><span class="btn-label">希望しない</span></span></label>
+              <label class="radio-btn"><input type="radio" name="este_courses_2" value="ふわふわエステコース"><span class="btn-text"><span class="btn-label">ふわふわエステコース ⭐人気No.1</span><span class="btn-price">+1,960円</span></span></label>
+              <label class="radio-btn"><input type="radio" name="este_courses_2" value="皮膚ケアコース"><span class="btn-text"><span class="btn-label">皮膚ケアコース</span><span class="btn-price">+1,390円</span></span></label>
+              <label class="radio-btn"><input type="radio" name="este_courses_2" value="スペシャル消臭コース"><span class="btn-text"><span class="btn-label">スペシャル消臭コース</span><span class="btn-price">+1,730円</span></span></label>
+              <label class="radio-btn"><input type="radio" name="este_courses_2" value="シルク泡パックコース"><span class="btn-text"><span class="btn-label">シルク泡パックコース</span><span class="btn-price">+1,730円</span></span></label>
+              <label class="radio-btn"><input type="radio" name="este_courses_2" value="ジェルパックコース"><span class="btn-text"><span class="btn-label">ジェルパックコース</span><span class="btn-price">+1,730円</span></span></label>
+              <label class="radio-btn"><input type="radio" name="este_courses_2" value="極上エステコース"><span class="btn-text"><span class="btn-label">極上エステコース</span><span class="btn-price">+2,650円</span></span></label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div id="section-hotel" class="section-hidden">
+      <div class="card">
+        <div class="card-title">🏨 ホテルの詳細</div>
+
+        <!-- STEP① 犬・猫 -->
+        <div class="field" id="field-pet-type">
+          <label class="field-label">犬・猫の選択 <span class="required">必須</span></label>
+          <div class="radio-group horizontal">
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="pet_type" value="犬" onchange="onPetTypeChange()">
+              <span class="btn-text"><span class="btn-label">🐕 犬</span></span>
+            </label>
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="pet_type" value="猫" onchange="onPetTypeChange()">
+              <span class="btn-text"><span class="btn-label">🐈 猫</span></span>
+            </label>
+          </div>
+          <p class="field-error-msg" id="err-pet_type"></p>
+        </div>
+
+        <!-- STEP② 頭数 -->
+        <div class="field" id="field-pet-count">
+          <label class="field-label">頭数 <span class="required">必須</span></label>
+          <div class="radio-group horizontal">
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="pet_count" value="1" onchange="onPetCountChange()">
+              <span class="btn-text"><span class="btn-label">1名</span></span>
+            </label>
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="pet_count" value="2" onchange="onPetCountChange()">
+              <span class="btn-text"><span class="btn-label">2名</span></span>
+            </label>
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="pet_count" value="3" onchange="onPetCountChange()">
+              <span class="btn-text"><span class="btn-label">3名以上</span></span>
+            </label>
+          </div>
+          <p class="field-error-msg" id="err-pet_count"></p>
+        </div>
+
+        <!-- 3名以上の電話案内 -->
+        <div class="field section-hidden" id="field-count-tel">
+          <div class="info-box" style="background:#fff8e1;border-color:#ffc107;color:#5d4037;">
+            🙇 3名以上のご予約はお手数ですがお電話にてご相談ください。<br>
+            <strong><a href="tel:050-8893-0169" style="color:#089490;">📞 050-8893-0169</a></strong>（8:30〜20:30・年中無休）
+          </div>
+        </div>
+
+        <!-- STEP③ 体重（犬のみ・1頭目） -->
+        <div class="field section-hidden" id="field-weight">
+          <label class="field-label" id="label-weight">1頭目の体重（kg） <span class="required">必須</span></label>
+          <input type="number" id="weight" min="0.1" max="60" step="0.1" placeholder="例：5.5" oninput="onWeightChange()">
+          <div class="info-box">体重によって部屋タイプの料金が変わります</div>
+          <p class="field-error-msg" id="err-weight"></p>
+        </div>
+
+        <!-- STEP③-2 体重（2頭目・犬・2名のみ） -->
+        <div class="field section-hidden" id="field-weight2">
+          <label class="field-label">2頭目の体重（kg） <span class="required">必須</span></label>
+          <input type="number" id="weight2" min="0.1" max="60" step="0.1" placeholder="例：4.0" oninput="onWeightChange()">
+        </div>
+
+        <!-- STEP④ 相部屋（2名のみ） -->
+        <div class="field section-hidden" id="field-shared">
+          <label class="field-label">相部屋希望 <span class="required">必須</span></label>
+          <div class="info-box" style="margin-bottom:8px;">相部屋の場合、同じ部屋に2名でご滞在いただきます（スタンダードは相部屋不可）</div>
+          <div class="radio-group horizontal">
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="is_shared" value="true" onchange="onSharedChange()">
+              <span class="btn-text"><span class="btn-label">はい（同室）</span></span>
+            </label>
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="is_shared" value="false" onchange="onSharedChange()">
+              <span class="btn-text"><span class="btn-label">いいえ（別室）</span></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- STEP⑤ 部屋タイプ（相部屋：1つ選択 / 別室：1頭目） -->
+        <div class="field section-hidden" id="field-room-type">
+          <label class="field-label" id="label-room-type">部屋タイプ <span class="required">必須</span></label>
+          <div class="radio-group" id="room-group">
+            <label class="radio-btn" id="label-standard">
+              <input type="radio" name="room_type" value="スタンダード" onchange="onRoomChange()">
+              <span class="btn-text">
+                <span class="btn-label">スタンダード</span>
+                <span class="btn-desc" id="desc-standard">〜7.9kgまで</span>
+              </span>
+            </label>
+            <label class="radio-btn" id="label-suite">
+              <input type="radio" name="room_type" value="スイート" onchange="onRoomChange()">
+              <span class="btn-text">
+                <span class="btn-label">スイート</span>
+                <span class="btn-desc" id="desc-suite">〜30kgまで</span>
+              </span>
+            </label>
+            <label class="radio-btn" id="label-deluxe">
+              <input type="radio" name="room_type" value="デラックス" onchange="onRoomChange()">
+              <span class="btn-text">
+                <span class="btn-label">デラックス</span>
+                <span class="btn-desc" id="desc-deluxe">犬のみ（散歩込み）</span>
+              </span>
+            </label>
+          </div>
+          <p class="field-error-msg" id="err-room_type"></p>
+        </div>
+
+        <!-- STEP⑤-2 2頭目の部屋タイプ（別室のみ） -->
+        <div class="field section-hidden" id="field-room-type2">
+          <label class="field-label" id="label-room-type2">2頭目の部屋タイプ <span class="required">必須</span></label>
+          <div class="radio-group" id="room-group2">
+            <label class="radio-btn" id="label-standard2">
+              <input type="radio" name="room_type2" value="スタンダード" onchange="onRoomChange()">
+              <span class="btn-text">
+                <span class="btn-label">スタンダード</span>
+                <span class="btn-desc" id="desc-standard2">〜7.9kgまで</span>
+              </span>
+            </label>
+            <label class="radio-btn" id="label-suite2">
+              <input type="radio" name="room_type2" value="スイート" onchange="onRoomChange()">
+              <span class="btn-text">
+                <span class="btn-label">スイート</span>
+                <span class="btn-desc" id="desc-suite2">〜30kgまで</span>
+              </span>
+            </label>
+            <label class="radio-btn" id="label-deluxe2">
+              <input type="radio" name="room_type2" value="デラックス" onchange="onRoomChange()">
+              <span class="btn-text">
+                <span class="btn-label">デラックス</span>
+                <span class="btn-desc" id="desc-deluxe2">犬のみ（散歩込み）</span>
+              </span>
+            </label>
+          </div>
+        </div>
+
+        <!-- STEP⑥ 日時 -->
+        <div class="field section-hidden" id="field-checkin">
+          <label class="field-label">チェックイン日時 <span class="required">必須</span></label>
+          <div class="datetime-row">
+            <input type="date" id="checkin_date" onchange="updateWalkVisibility()">
+            <select id="checkin_time" onchange="updateWalkVisibility()"><option value="">時間を選択</option></select>
+          </div>
+          <p class="field-error-msg" id="err-checkin"></p>
+        </div>
+
+        <div class="field section-hidden" id="field-checkout">
+          <label class="field-label">チェックアウト日時 <span class="required">必須</span></label>
+          <div class="datetime-row">
+            <input type="date" id="checkout_date" onchange="updateWalkVisibility()">
+            <select id="checkout_time" onchange="updateWalkVisibility()"><option value="">時間を選択</option></select>
+          </div>
+          <p class="field-error-msg" id="err-checkout"></p>
+        </div>
+
+        <!-- STEP⑦ お散歩（1頭目 or 単独） -->
+        <div class="field section-hidden" id="field-walk-1">
+          <label class="field-label" id="label-walk-1">お散歩オプション <span class="optional">任意</span></label>
+          <div class="info-box" id="walk-price-info-1" style="margin-bottom:8px;"></div>
+          <div class="radio-group horizontal">
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="want_walk_1" value="true" onchange="onWalkChange()">
+              <span class="btn-text"><span class="btn-label">希望する</span></span>
+            </label>
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="want_walk_1" value="false" onchange="onWalkChange()">
+              <span class="btn-text"><span class="btn-label">希望しない</span></span>
+            </label>
+          </div>
+          <!-- スタンダードのみ日数入力 -->
+          <div class="section-hidden" id="field-walk-days-1" style="margin-top:10px;">
+            <label class="field-label" id="label-walk-days-1" style="margin-bottom:4px;">散歩希望日数 <span class="required">必須</span></label>
+            <input type="number" id="walk_days_1" min="1" step="1" placeholder="例：3"
+              oninput="clampWalkDays(1)">
+            <div class="info-box" id="walk-days-hint-1" style="margin-top:6px;"></div>
+          </div>
+        </div>
+
+        <!-- STEP⑦-2 お散歩（2頭目・別室のみ） -->
+        <div class="field section-hidden" id="field-walk-2">
+          <label class="field-label" id="label-walk-2">2頭目のお散歩オプション <span class="optional">任意</span></label>
+          <div class="info-box" id="walk-price-info-2" style="margin-bottom:8px;"></div>
+          <div class="radio-group horizontal">
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="want_walk_2" value="true" onchange="onWalkChange()">
+              <span class="btn-text"><span class="btn-label">希望する</span></span>
+            </label>
+            <label class="radio-btn" style="flex:1">
+              <input type="radio" name="want_walk_2" value="false" onchange="onWalkChange()">
+              <span class="btn-text"><span class="btn-label">希望しない</span></span>
+            </label>
+          </div>
+          <!-- スタンダードのみ日数入力 -->
+          <div class="section-hidden" id="field-walk-days-2" style="margin-top:10px;">
+            <label class="field-label" id="label-walk-days-2" style="margin-bottom:4px;">散歩希望日数 <span class="required">必須</span></label>
+            <input type="number" id="walk_days_2" min="1" step="1" placeholder="例：3"
+              oninput="clampWalkDays(2)">
+            <div class="info-box" id="walk-days-hint-2" style="margin-top:6px;"></div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ── ホテル宿泊中トリミング（combined専用） ── -->
+    <div id="section-hotel-booking-note" class="section-hidden">
+      <div class="info-box" style="margin-bottom:16px;border-radius:10px;padding:14px;">
+        🎉 ホテル宿泊中のトリミングはトリミング基本料金が<strong>5%OFF</strong>になります！
+      </div>
+    </div>
+
+    <div class="disclaimer">
+      ※こちらは概算料金です。毛量・毛質・体型・当日の状態により変動する場合があります。<br>
+      お電話（050-8893-0169）でご確認ください。
+    </div>
+
+    <div style="display:flex;gap:10px;">
+      <button class="btn-secondary" style="width:80px" onclick="goBack()">← 戻る</button>
+      <button class="btn-primary" style="flex:1" onclick="goToConfirm()">確認画面へ　→</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       SCREEN 3：確認画面
+  ════════════════════════════════ -->
+  <div id="screen-confirm" class="section-hidden">
+    <div class="card">
+      <div class="card-title">📋 入力内容の確認</div>
+      <table class="confirm-table" id="confirm-table"></table>
+    </div>
+    <div class="disclaimer">
+      ※こちらは概算料金です。毛量・毛質・体型・当日の状態により変動する場合があります。<br>
+      お電話（050-8893-0169）でご確認ください。
+    </div>
+    <div style="height:12px;"></div>
+    <div style="position:sticky;bottom:0;left:0;right:0;padding:12px 0;background:white;border-top:2px solid var(--border);display:flex;gap:10px;z-index:20;">
+      <button class="btn-secondary" style="width:100px" onclick="backToDetail()">← 修正する</button>
+      <button class="btn-primary" style="flex:1" onclick="submitForm()">この内容で送信　📨</button>
+    </div>
+  </div>
+
+  <!-- ════════════════════════════════
+       SCREEN 4：送信完了
+  ════════════════════════════════ -->
+  <div id="screen-done" class="section-hidden">
+    <div class="card" style="text-align:center;padding:36px 20px;">
+      <div class="done-icon">🎉</div>
+      <div class="done-title">送信が完了しました！</div>
+      <div class="done-msg">
+        LINEにお見積もりをお送りします。<br>
+        しばらくお待ちください😊<br><br>
+        ご不明な点はお気軽にお電話ください。<br>
+        <strong style="color:var(--brand-dark)">📞 050-8893-0169</strong><br>
+        <span style="font-size:0.75rem">8:30〜20:30（年中無休）</span>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<script>
+// ════════════════════════════════
+// 定数・初期化
+// ════════════════════════════════
+const WEBHOOK_URL = 'https://hook.us2.make.com/qqri5t911g6nlyf5hx3cod5r60djk2p5';
+
+// URLからline_user_idを取得
+const urlParams = new URLSearchParams(window.location.search);
+const LINE_USER_ID = urlParams.get('uid') || '';
+
+// 時間選択肢を生成（8:30〜20:30、30分刻み）
+function buildTimeOptions(selectEl) {
+  const times = [];
+  for (let h = 8; h <= 20; h++) {
+    ['00','30'].forEach(m => {
+      if (h === 8 && m === '00') return; // 8:00は除外
+      times.push(`${String(h).padStart(2,'0')}:${m}`);
+    });
+  }
+  times.forEach(t => {
+    const opt = document.createElement('option');
+    opt.value = t; opt.textContent = t;
+    selectEl.appendChild(opt);
+  });
+}
+buildTimeOptions(document.getElementById('checkin_time'));
+buildTimeOptions(document.getElementById('checkout_time'));
+
+// 今日以降の日付をminに設定
+const today = new Date().toISOString().split('T')[0];
+document.getElementById('checkin_date').min = today;
+document.getElementById('checkout_date').min = today;
+
+// ════════════════════════════════
+// ステップ管理
+// ════════════════════════════════
+let currentCategory = '';
+
+function setStep(n) {
+  document.querySelectorAll('.step').forEach((el, i) => {
+    el.classList.remove('active','done');
+    if (i + 1 < n) el.classList.add('done');
+    else if (i + 1 === n) el.classList.add('active');
+  });
+}
+
+function show(id) { const el = document.getElementById(id); if (!el) return; el.style.display = ''; el.classList.remove('section-hidden'); }
+function hide(id) { const el = document.getElementById(id); if (!el) return; el.style.display = 'none'; }
+function toggle(id, show_) { show_ ? show(id) : hide(id); }
+
+// ════════════════════════════════
+// カテゴリ → 詳細へ
+// ════════════════════════════════
+function goToDetail() {
+  const selected = document.querySelector('input[name="category"]:checked');
+  if (!selected) {
+    document.getElementById('cat-error').style.display = 'block';
+    return;
+  }
+  document.getElementById('cat-error').style.display = 'none';
+  currentCategory = selected.value;
+
+  hide('screen-category');
+  show('screen-detail');
+
+  // セクション表示制御
+  toggle('section-trimming', currentCategory === 'trimming' || currentCategory === 'combined');
+  toggle('section-hotel', currentCategory === 'hotel' || currentCategory === 'combined');
+  toggle('section-hotel-booking-note', currentCategory === 'combined');
+  // 2頭目トリミングは combined + 2名のときのみ（goToDetail時点ではまだ非表示）
+  hide('section-trimming-2');
+
+  // combined のとき：ホテル→5%OFFバナー→トリミングの順にDOMを並べ替え
+  if (currentCategory === 'combined') {
+    const detail   = document.getElementById('screen-detail');
+    const hotel    = document.getElementById('section-hotel');
+    const note     = document.getElementById('section-hotel-booking-note');
+    const trimming = document.getElementById('section-trimming');
+    const disclaimer = detail.querySelector('.disclaimer');
+    if (hotel && note && trimming && disclaimer) {
+      detail.insertBefore(hotel,    disclaimer);
+      detail.insertBefore(note,     disclaimer);
+      detail.insertBefore(trimming, disclaimer);
+    }
+  }
+
+  setStep(2);
+  window.scrollTo(0, 0);
+}
+
+function goBack() {
+  hide('screen-detail');
+  show('screen-category');
+  setStep(1);
+  window.scrollTo(0, 0);
+}
+
+// ════════════════════════════════
+// 動的表示切替
+// ════════════════════════════════
+// ════════════════════════════════
+// ホテル 動的表示切替（案C）
+// ════════════════════════════════
+function onPetTypeChange() {
+  updateHotelFlow();
+  // 猫選択時はトリミングセクション（1頭目・2頭目）を完全非表示＋メッセージ表示
+  if (currentCategory === 'combined') {
+    const petType = document.querySelector('input[name="pet_type"]:checked')?.value;
+    const isCat = petType === '猫';
+    // 1頭目トリミング
+    const catBlock = document.getElementById('trimming-cat-block');
+    const trimmingCard = document.querySelector('#section-trimming .card');
+    if (catBlock) catBlock.style.display = isCat ? '' : 'none';
+    if (trimmingCard) trimmingCard.style.display = isCat ? 'none' : '';
+    // 2頭目トリミング（猫のとき完全非表示）
+    const trimming2 = document.getElementById('section-trimming-2');
+    if (trimming2) trimming2.style.display = isCat ? 'none' : '';
+  }
+}
+
+function onPetCountChange() {
+  const count = document.querySelector('input[name="pet_count"]:checked')?.value;
+  const petType = document.querySelector('input[name="pet_type"]:checked')?.value;
+  // 1名に戻したとき is_shared を強制リセット（残留バグ防止）
+  if (count === '1') {
+    document.querySelectorAll('input[name="is_shared"]').forEach(r => r.checked = false);
+  }
+  updateHotelFlow();
+}
+
+function onSharedChange() {
+  updateHotelFlow();
+}
+
+function onWeightChange() {
+  updateRoomRestrictions();
+  updateHotelFlow(); // 体重変更時にラベルも更新
+}
+
+function onRoomChange() {
+  updateWalkVisibility();
+}
+
+// ホテルフォーム全体の表示制御（案C：順番通りに出す）
+function updateHotelFlow() {
+  const petType = document.querySelector('input[name="pet_type"]:checked')?.value;
+  const count   = document.querySelector('input[name="pet_count"]:checked')?.value;
+  const shared  = document.querySelector('input[name="is_shared"]:checked')?.value;
+  const isMulti = count && count !== '1';
+  const is3plus = count === '3';
+
+  // 3名以上 → 電話案内のみ表示・以降非表示
+  toggle('field-count-tel', is3plus);
+  if (is3plus) {
+    ['field-weight','field-weight2','field-shared','field-room-type',
+     'field-room-type2','field-checkin','field-checkout','field-walk'].forEach(id => hide(id));
+    return;
+  }
+
+  // 体重（犬のみ）
+  toggle('field-weight', !!petType && petType === '犬');
+  // 2頭目体重（犬・2名のみ）
+  toggle('field-weight2', petType === '犬' && isMulti);
+  // 相部屋（2名のみ）
+  toggle('field-shared', !!petType && isMulti);
+
+  // 部屋タイプ（犬猫・頭数・相部屋が揃ったら表示）
+  const roomReady = !!petType && !!count && (!isMulti || !!shared);
+  toggle('field-room-type', roomReady);
+  // ラベル変更（体重を括弧内に表示）
+  const w1val = document.getElementById('weight')?.value;
+  const w2val = document.getElementById('weight2')?.value;
+  const w1tag = (petType === '犬' && w1val) ? `（${w1val}kg）` : '';
+  const w2tag = (petType === '犬' && w2val) ? `（${w2val}kg）` : '';
+  const roomLabel = document.getElementById('label-room-type');
+  if (roomLabel) {
+    const isShared = shared === 'true';
+    const labelText = isMulti && !isShared ? `1頭目の部屋タイプ${w1tag}` : `部屋タイプ${w1tag}`;
+    roomLabel.innerHTML = labelText + ' <span class="required">必須</span>';
+  }
+  // 2頭目ラベル
+  const room2Label = document.getElementById('label-room-type2');
+  if (room2Label) {
+    room2Label.innerHTML = `2頭目の部屋タイプ${w2tag} <span class="required">必須</span>`;
+  }
+  // 2頭目の部屋タイプ（別室のみ）
+  toggle('field-room-type2', roomReady && isMulti && shared === 'false');
+
+  // 日時（部屋タイプが出たら表示）
+  toggle('field-checkin', roomReady);
+  toggle('field-checkout', roomReady);
+
+  // combined + 2名 → 2頭目トリミング表示
+  const show2ndTrimming = currentCategory === 'combined' && isMulti && !is3plus;
+  toggle('section-trimming-2', show2ndTrimming);
+
+  // 制限更新
+  if (roomReady) updateRoomRestrictions();
+  updateWalkVisibility();
+}
+
+// 部屋タイプのグレーアウト制御
+function updateRoomRestrictions() {
+  const petType = document.querySelector('input[name="pet_type"]:checked')?.value;
+  const shared  = document.querySelector('input[name="is_shared"]:checked')?.value;
+  const w1 = parseFloat(document.getElementById('weight')?.value || '0');
+  const w2 = parseFloat(document.getElementById('weight2')?.value || '0');
+
+  // 1頭目の部屋制限
+  applyRoomRestriction('label-standard','desc-standard', w1 >= 8, w1 >= 8 ? '〜7.9kgまで（体重オーバー）' : '〜7.9kgまで');
+  applyRoomRestriction('label-suite','desc-suite', w1 > 30, w1 > 30 ? '〜30kgまで（体重オーバー）' : '〜30kgまで');
+  applyRoomRestriction('label-deluxe','desc-deluxe', petType === '猫', petType === '猫' ? '犬のみ（猫は不可）' : '犬のみ（散歩込み）');
+
+  // 2頭目の部屋制限（別室のみ）
+  applyRoomRestriction('label-standard2','desc-standard2', w2 >= 8, w2 >= 8 ? '〜7.9kgまで（体重オーバー）' : '〜7.9kgまで');
+  applyRoomRestriction('label-suite2','desc-suite2', w2 > 30, w2 > 30 ? '〜30kgまで（体重オーバー）' : '〜30kgまで');
+  applyRoomRestriction('label-deluxe2','desc-deluxe2', petType === '猫', petType === '猫' ? '犬のみ（猫は不可）' : '犬のみ（散歩込み）');
+
+  // 相部屋のとき：犬はスタンダード不可、猫はスタンダード可（合算8kg未満のみ）
+  if (shared === 'true') {
+    if (petType === '犬') {
+      applyRoomRestriction('label-standard','desc-standard', true, '〜7.9kgまで（犬の相部屋は不可）');
+    } else if (petType === '猫') {
+      // 猫は相部屋スタンダードOK（合算体重は店舗で確認）
+      applyRoomRestriction('label-standard','desc-standard', false, '〜7.9kgまで（合算体重8kg未満）');
+    }
+  }
+
+  updateWalkVisibility();
+}
+
+function applyRoomRestriction(labelId, descId, disabled, descText) {
+  const label = document.getElementById(labelId);
+  const inp   = label?.querySelector('input');
+  const desc  = document.getElementById(descId);
+  if (!label || !inp) return;
+  inp.disabled = disabled;
+  label.style.opacity = disabled ? '0.38' : '';
+  label.style.pointerEvents = disabled ? 'none' : '';
+  if (desc) desc.textContent = descText;
+  if (disabled && inp.checked) { inp.checked = false; }
+}
+
+function onWalkChange() {
+  updateWalkVisibility();
+}
+
+function onWalkTypeChange(n) {} // 不要になったが互換用に残す
+
+// 宿泊数・延長時間を計算して表示用文字列を返す
+function calcStayInfo() {
+  const cinDate = document.getElementById('checkin_date')?.value;
+  const cinTime = document.getElementById('checkin_time')?.value;
+  const coutDate = document.getElementById('checkout_date')?.value;
+  const coutTime = document.getElementById('checkout_time')?.value;
+  if (!cinDate || !cinTime || !coutDate || !coutTime) return null;
+
+  const cinDt  = new Date(`${cinDate}T${cinTime}`);
+  const coutDt = new Date(`${coutDate}T${coutTime}`);
+  if (coutDt <= cinDt) return null;
+
+  // 日付差 = 宿泊数のベース
+  const dateDiff = Math.round((new Date(coutDate) - new Date(cinDate)) / 86400000);
+
+  // チェックイン20:30以降なら当日1泊カウント
+  let nights = dateDiff;
+  if (cinTime >= '20:30') nights = dateDiff; // 日付差で既にカウント済み
+
+  // 延長：チェックイン起点で nights×24h を超えた分
+  const cycleEnd = new Date(cinDt.getTime() + nights * 24 * 3600 * 1000);
+  const extMs = coutDt - cycleEnd;
+  const extHours = extMs > 0 ? Math.ceil(extMs / 3600000) : 0;
+
+  if (nights === 0 && extHours === 0) return '日帰り（一時預かり）';
+  let result = `${nights}泊`;
+  if (extHours > 0) result += `＋${extHours}時間延長`;
+  return result;
+}
+
+// 宿泊数と散歩上限を計算
+function calcMaxWalkDays() {
+  const cinDate = document.getElementById('checkin_date')?.value;
+  const cinTime = document.getElementById('checkin_time')?.value;
+  const coutDate = document.getElementById('checkout_date')?.value;
+  if (!cinDate || !coutDate) return null;
+
+  const d1 = new Date(cinDate);
+  const d2 = new Date(coutDate);
+  const diffMs = d2 - d1;
+  if (diffMs <= 0) return null;
+
+  let nights = Math.round(diffMs / (1000 * 60 * 60 * 24));
+
+  // 17:00以降チェックインは1泊分引く（最低0）
+  if (cinTime && cinTime >= '17:00') {
+    nights = Math.max(0, nights - 1);
+  }
+  return nights;
+}
+
+// 入力値をmaxでキャップ
+function clampWalkDays(n) {
+  const inp = document.getElementById(`walk_days_${n}`);
+  if (!inp || !inp.max) return;
+  const max = parseInt(inp.max);
+  if (parseInt(inp.value) > max) inp.value = max;
+  if (parseInt(inp.value) < 1) inp.value = 1;
+}
+
+function updateWalkVisibility() {
+  const petType    = document.querySelector('input[name="pet_type"]:checked')?.value;
+  const shared     = document.querySelector('input[name="is_shared"]:checked')?.value;
+  const room1      = document.querySelector('input[name="room_type"]:checked')?.value;
+  const room2      = document.querySelector('input[name="room_type2"]:checked')?.value;
+  const isCat      = petType === '猫';
+  const isSeparate = shared === 'false';
+  const isHotel    = currentCategory === 'hotel' || currentCategory === 'combined';
+  const maxDays    = calcMaxWalkDays();
+
+  // --- 1頭目（or 単独）---
+  const showWalk1 = isHotel && !isCat && (room1 === 'スタンダード' || room1 === 'スイート');
+  toggle('field-walk-1', showWalk1);
+  if (showWalk1) {
+    const lbl1 = document.getElementById('label-walk-1');
+    const w1display = (petType === '犬' && document.getElementById('weight')?.value)
+      ? `（${document.getElementById('weight').value}kg）` : '';
+    if (lbl1) lbl1.innerHTML = (isSeparate ? `1頭目のお散歩オプション${w1display}` : `お散歩オプション${w1display}`) + ' <span class="optional">任意</span>';
+
+    const priceInfo1 = document.getElementById('walk-price-info-1');
+    if (priceInfo1) priceInfo1.textContent = room1 === 'スタンダード'
+      ? '🐾 600円／回（1泊1回）'
+      : '🐾 600円（宿泊数対応）';
+
+    const want1 = document.querySelector('input[name="want_walk_1"]:checked')?.value;
+    // スタンダードのみ日数入力表示
+    const showDays1 = want1 === 'true' && room1 === 'スタンダード';
+    toggle('field-walk-days-1', showDays1);
+    if (showDays1 && maxDays !== null) {
+      const inp1 = document.getElementById('walk_days_1');
+      inp1.max = maxDays;
+      inp1.placeholder = `1〜${maxDays}日`;
+      const hint1 = document.getElementById('walk-days-hint-1');
+      const cinTime = document.getElementById('checkin_time')?.value;
+      const lateNote = (cinTime && cinTime >= '17:00') ? '（17時以降チェックインのため宿泊数−1日）' : '';
+      if (hint1) hint1.textContent = `最大 ${maxDays} 日まで${lateNote}`;
+    }
+  } else {
+    hide('field-walk-days-1');
+  }
+
+  // --- 2頭目（2名以上・相部屋も別室も表示）---
+  const count = document.querySelector('input[name="pet_count"]:checked')?.value;
+  const isMulti = count && count !== '1';
+  // 相部屋の場合は room1 をそのまま2頭目にも使う
+  const room2effective = isSeparate ? room2 : room1;
+  const showWalk2 = isHotel && isMulti && !isCat && (room2effective === 'スタンダード' || room2effective === 'スイート');
+  toggle('field-walk-2', showWalk2);
+  if (showWalk2) {
+    const lbl2 = document.getElementById('label-walk-2');
+    const w2display = (petType === '犬' && document.getElementById('weight2')?.value)
+      ? `（${document.getElementById('weight2').value}kg）` : '';
+    if (lbl2) lbl2.innerHTML = `2頭目のお散歩オプション${w2display} <span class="optional">任意</span>`;
+    const priceInfo2 = document.getElementById('walk-price-info-2');
+    if (priceInfo2) priceInfo2.textContent = room2effective === 'スタンダード'
+      ? '🐾 600円／回（1泊1回）'
+      : '🐾 600円（宿泊数対応）';
+
+    const want2 = document.querySelector('input[name="want_walk_2"]:checked')?.value;
+    const showDays2 = want2 === 'true' && room2effective === 'スタンダード';
+    toggle('field-walk-days-2', showDays2);
+    if (showDays2 && maxDays !== null) {
+      const inp2 = document.getElementById('walk_days_2');
+      inp2.max = maxDays;
+      inp2.placeholder = `1〜${maxDays}日`;
+      const hint2 = document.getElementById('walk-days-hint-2');
+      const cinTime = document.getElementById('checkin_time')?.value;
+      const lateNote = (cinTime && cinTime >= '17:00') ? '（17時以降チェックインのため宿泊数−1日）' : '';
+      if (hint2) hint2.textContent = `最大 ${maxDays} 日まで${lateNote}`;
+    }
+  } else {
+    hide('field-walk-days-2');
+  }
+}
+
+// 不要になった旧関数（互換用）
+function updateWeightLabel() {}
+function setRoomOption() {}
+
+// ════════════════════════════════
+// バリデーション
+// ════════════════════════════════
+function setFieldError(fieldId, errId, msg) {
+  const field = document.getElementById(fieldId);
+  const err   = document.getElementById(errId);
+  if (!field || !err) return;
+  if (msg) {
+    field.classList.add('has-error');
+    err.innerHTML = '⚠️ ' + msg;
+    err.classList.add('show');
+  } else {
+    field.classList.remove('has-error');
+    err.innerHTML = '';
+    err.classList.remove('show');
+  }
+}
+
+function clearAllErrors() {
+  document.querySelectorAll('.field.has-error').forEach(f => f.classList.remove('has-error'));
+  document.querySelectorAll('.field-error-msg.show').forEach(e => {
+    e.classList.remove('show'); e.innerHTML = '';
+  });
+}
+
+function validate() {
+  clearAllErrors();
+  let hasError = false;
+  const cat = currentCategory;
+
+  if (cat === 'trimming' || cat === 'combined') {
+    const breedVal = document.getElementById('dog_breed').value.trim();
+    if (!breedVal && !isMixSelected) {
+      setFieldError('field-dog-breed', 'err-dog_breed', '犬種を選択してください');
+      hasError = true;
+    } else if (isMixSelected && selectedMixBreeds.length < 2) {
+      setFieldError('field-dog-breed', 'err-dog_breed', 'ミックス犬は2犬種を両方選択してください');
+      hasError = true;
+    } else {
+      setFieldError('field-dog-breed', 'err-dog_breed', '');
+    }
+    if (!document.querySelector('input[name="course_type"]:checked')) {
+      setFieldError('field-course', 'err-course', 'コースを選択してください');
+      hasError = true;
+    } else {
+      setFieldError('field-course', 'err-course', '');
+    }
+  }
+
+  // 2頭目トリミング（combined + 2名）
+  const show2nd = currentCategory === 'combined' &&
+    document.getElementById('section-trimming-2') &&
+    document.getElementById('section-trimming-2').style.display !== 'none';
+  if (show2nd) {
+    const breed2Val = document.getElementById('dog_breed_2').value.trim();
+    if (!breed2Val && !isMixSelected2) {
+      setFieldError('field-dog-breed-2', 'err-dog_breed_2', '2頭目の犬種を選択してください');
+      hasError = true;
+    } else { setFieldError('field-dog-breed-2', 'err-dog_breed_2', ''); }
+    if (!document.querySelector('input[name="course_type_2"]:checked')) {
+      setFieldError('field-course-2', 'err-course-2', '2頭目のコースを選択してください');
+      hasError = true;
+    } else { setFieldError('field-course-2', 'err-course-2', ''); }
+  }
+
+  if (cat === 'hotel' || cat === 'combined') {
+    if (!document.querySelector('input[name="pet_type"]:checked')) {
+      setFieldError('field-pet-type', 'err-pet_type', '犬・猫を選択してください'); hasError = true;
+    } else { setFieldError('field-pet-type', 'err-pet_type', ''); }
+
+    if (!document.querySelector('input[name="pet_count"]:checked')) {
+      setFieldError('field-pet-count', 'err-pet_count', '頭数を選択してください'); hasError = true;
+    } else { setFieldError('field-pet-count', 'err-pet_count', ''); }
+
+    const count   = document.querySelector('input[name="pet_count"]:checked')?.value;
+    const petType = document.querySelector('input[name="pet_type"]:checked')?.value;
+    const isMulti = count && count !== '1';
+    const is3plus = count === '3';
+
+    // 3名以上は電話案内のみ・それ以降チェック不要
+    if (!is3plus) {
+      if (petType === '犬' && !document.getElementById('weight').value) {
+        setFieldError('field-weight', 'err-weight', '体重を入力してください'); hasError = true;
+      } else { setFieldError('field-weight', 'err-weight', ''); }
+
+      if (!document.querySelector('input[name="room_type"]:checked')) {
+        setFieldError('field-room-type', 'err-room_type', '部屋タイプを選択してください'); hasError = true;
+      } else { setFieldError('field-room-type', 'err-room_type', ''); }
+
+      const noCheckin = !document.getElementById('checkin_date').value || !document.getElementById('checkin_time').value;
+      if (noCheckin) {
+        setFieldError('field-checkin', 'err-checkin', 'チェックイン日時を入力してください'); hasError = true;
+      } else { setFieldError('field-checkin', 'err-checkin', ''); }
+
+      const noCheckout = !document.getElementById('checkout_date').value || !document.getElementById('checkout_time').value;
+      if (noCheckout) {
+        setFieldError('field-checkout', 'err-checkout', 'チェックアウト日時を入力してください'); hasError = true;
+      } else { setFieldError('field-checkout', 'err-checkout', ''); }
+    }
+  }
+
+  if (hasError) {
+    // 最初のエラー箇所までスクロール
+    const firstErr = document.querySelector('.field.has-error');
+    if (firstErr) firstErr.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  return !hasError;
+}
+
+// ════════════════════════════════
+// 確認画面へ
+// ════════════════════════════════
+function goToConfirm() {
+  if (!validate()) return;
+
+  const rows = buildConfirmRows();
+  const table = document.getElementById('confirm-table');
+  table.innerHTML = rows.map(([k,v]) =>
+    `<tr><th>${k}</th><td>${v || '—'}</td></tr>`
+  ).join('');
+
+  hide('screen-detail');
+  show('screen-confirm');
+  setStep(3);
+  window.scrollTo(0, 0);
+}
+
+function backToDetail() {
+  hide('screen-confirm');
+  show('screen-detail');
+  setStep(2);
+  window.scrollTo(0, 0);
+}
+
+function buildConfirmRows() {
+  const rows = [];
+  const catLabel = { trimming:'トリミング', hotel:'ホテル', combined:'ホテル＋トリミング両方' };
+  rows.push(['サービス', catLabel[currentCategory]]);
+
+  if (currentCategory === 'trimming' || currentCategory === 'combined') {
+    rows.push(['犬種', document.getElementById('dog_breed').value]);
+    rows.push(['コース', document.querySelector('input[name="course_type"]:checked')?.value]);
+    const opts = [...document.querySelectorAll('input[name="options"]:checked')].map(e=>e.value);
+    if (opts.length) rows.push(['追加オプション', opts.join('、')]);
+    const esteVal = document.querySelector('input[name="este_courses"]:checked')?.value;
+    if (esteVal && esteVal !== 'なし') rows.push(['エステコース', esteVal]);
+    // 2頭目トリミング
+    if (document.getElementById('dog_breed_2').value) {
+      rows.push(['2頭目の犬種', document.getElementById('dog_breed_2').value]);
+      rows.push(['2頭目のコース', document.querySelector('input[name="course_type_2"]:checked')?.value]);
+      const opts2 = [...document.querySelectorAll('input[name="options_2"]:checked')].map(e=>e.value);
+      if (opts2.length) rows.push(['2頭目の追加オプション', opts2.join('、')]);
+      const este2 = document.querySelector('input[name="este_courses_2"]:checked')?.value;
+      if (este2 && este2 !== 'なし') rows.push(['2頭目のエステコース', este2]);
+    }
+  }
+  if (currentCategory === 'hotel' || currentCategory === 'combined') {
+    rows.push(['種別', document.querySelector('input[name="pet_type"]:checked')?.value]);
+    rows.push(['頭数', document.querySelector('input[name="pet_count"]:checked')?.value + '名']);
+    const w = document.getElementById('weight').value;
+    if (w) rows.push(['1頭目の体重', w + 'kg']);
+    const w2 = document.getElementById('weight2').value;
+    if (w2) rows.push(['2頭目の体重', w2 + 'kg']);
+    const shared = document.querySelector('input[name="is_shared"]:checked');
+    if (shared) rows.push(['相部屋', shared.value === 'true' ? 'はい（同室）' : 'いいえ（別室）']);
+    rows.push(['部屋タイプ', document.querySelector('input[name="room_type"]:checked')?.value]);
+    const rt2 = document.querySelector('input[name="room_type2"]:checked')?.value;
+    if (rt2) rows.push(['2頭目の部屋タイプ', rt2]);
+    const cin = document.getElementById('checkin_date').value + ' ' + document.getElementById('checkin_time').value;
+    const cout = document.getElementById('checkout_date').value + ' ' + document.getElementById('checkout_time').value;
+    rows.push(['チェックイン', cin]);
+    rows.push(['チェックアウト', cout]);
+    const stayInfo = calcStayInfo();
+    if (stayInfo) rows.push(['宿泊数（概算）', stayInfo]);
+    const walk1 = document.querySelector('input[name="want_walk_1"]:checked');
+    if (walk1) {
+      rows.push(['お散歩（1頭目）', walk1.value === 'true' ? '希望する' : '希望しない']);
+      if (walk1.value === 'true') {
+        const wd1 = document.getElementById('walk_days_1')?.value;
+        if (wd1) rows.push(['散歩日数', wd1 + '日間']);
+      }
+    }
+    const walk2 = document.querySelector('input[name="want_walk_2"]:checked');
+    if (walk2) {
+      rows.push(['お散歩（2頭目）', walk2.value === 'true' ? '希望する' : '希望しない']);
+      if (walk2.value === 'true') {
+        const wd2 = document.getElementById('walk_days_2')?.value;
+        if (wd2) rows.push(['散歩日数（2頭目）', wd2 + '日間']);
+      }
+    }
+  }
+  return rows;
+}
+
+// ════════════════════════════════
+// 送信
+// ════════════════════════════════
+function collectData() {
+  const cat = currentCategory;
+  const data = {
+    line_user_id: LINE_USER_ID,
+    category: cat,
+    dog_breed: '',
+    course_type: '',
+    options: [],
+    este_courses: [],
+    has_hotel_booking: cat === 'combined',
+    pet_type: '',
+    weight: null,
+    room_type: '',
+    checkin_datetime: '',
+    checkout_datetime: '',
+    pet_count: 1,
+    is_shared: false,
+    weight2: null,
+    want_walk: false,
+    walk_days: 0
+  };
+
+  if (cat === 'trimming' || cat === 'combined') {
+    data.dog_breed = document.getElementById('dog_breed').value.trim();
+    data.course_type = document.querySelector('input[name="course_type"]:checked')?.value || '';
+    data.options = [...document.querySelectorAll('input[name="options"]:checked')].map(e=>e.value);
+    const esteVal = document.querySelector('input[name="este_courses"]:checked')?.value;
+    data.este_courses = (esteVal && esteVal !== 'なし') ? [esteVal] : [];
+    // 2頭目トリミング
+    data.dog_breed_2 = document.getElementById('dog_breed_2')?.value.trim() || '';
+    data.course_type_2 = document.querySelector('input[name="course_type_2"]:checked')?.value || '';
+    data.options_2 = [...document.querySelectorAll('input[name="options_2"]:checked')].map(e=>e.value);
+    const este2 = document.querySelector('input[name="este_courses_2"]:checked')?.value;
+    data.este_courses_2 = (este2 && este2 !== 'なし') ? [este2] : [];
+  }
+  if (cat === 'hotel' || cat === 'combined') {
+    data.pet_type = document.querySelector('input[name="pet_type"]:checked')?.value || '';
+    const w = parseFloat(document.getElementById('weight').value);
+    data.weight = isNaN(w) ? null : w;
+    data.room_type = document.querySelector('input[name="room_type"]:checked')?.value || '';
+    data.room_type2 = document.querySelector('input[name="room_type2"]:checked')?.value || '';
+    data.checkin_datetime = document.getElementById('checkin_date').value + ' ' + document.getElementById('checkin_time').value;
+    data.checkout_datetime = document.getElementById('checkout_date').value + ' ' + document.getElementById('checkout_time').value;
+    data.pet_count = parseInt(document.querySelector('input[name="pet_count"]:checked')?.value || 1);
+    const shared = document.querySelector('input[name="is_shared"]:checked');
+    data.is_shared = shared?.value === 'true';
+    const w2 = parseFloat(document.getElementById('weight2').value);
+    data.weight2 = isNaN(w2) ? null : w2;
+    const walk = document.querySelector('input[name="want_walk"]:checked');
+    data.want_walk = document.querySelector('input[name="want_walk_1"]:checked')?.value === 'true';
+    data.walk_days = parseInt(document.getElementById('walk_days_1')?.value || '0') || 0;
+    data.want_walk_2 = document.querySelector('input[name="want_walk_2"]:checked')?.value === 'true';
+    data.walk_days_2 = parseInt(document.getElementById('walk_days_2')?.value || '0') || 0;
+  }
+  return data;
+}
+
+// ════════════════════════════════
+// 犬種インクリメンタルサーチ
+// ════════════════════════════════
+
+// price_rule.md の全犬種 + 通称・表記ゆれ対応
+const BREED_DATA = [
+  { display: 'ミニピン',                      search: ['ミニピン', 'ミニチュアピンシャー'] },
+  { display: 'スムースチワワ',                search: ['スムースチワワ', 'チワワ', 'スムース'] },
+  { display: 'ロングチワワ',                  search: ['ロングチワワ', 'チワワ', 'ロングコート'] },
+  { display: 'スムースダックス',              search: ['スムースダックス', 'ダックス', 'ダックスフント', 'スムース'] },
+  { display: 'ロングダックス',                search: ['ロングダックス', 'ダックス', 'ダックスフント', 'ミニチュアダックス', 'ロング'] },
+  { display: 'イタリアングレーハウンド',      search: ['イタリアングレーハウンド', 'イタグレ'] },
+  { display: 'パグ',                          search: ['パグ'] },
+  { display: 'パピヨン',                      search: ['パピヨン'] },
+  { display: 'ジャックラッセルテリア',        search: ['ジャックラッセルテリア', 'ジャックラッセル', 'JRT'] },
+  { display: 'マルチーズ',                    search: ['マルチーズ', 'マルツ'] },
+  { display: 'ヨークシャーテリア',            search: ['ヨークシャーテリア', 'ヨーキー', 'ヨーク', 'ヨークシャ'] },
+  { display: 'ボストンテリア',                search: ['ボストンテリア', 'ボストン'] },
+  { display: 'フレンチブルドッグ',            search: ['フレンチブルドッグ', 'フレブル', 'Fブル', 'フレンチ', 'フレブ'] },
+  { display: 'ポメラニアン',                  search: ['ポメラニアン', 'ポメ'] },
+  { display: 'シーズー',                      search: ['シーズー', 'シーズ'] },
+  { display: 'ペキニーズ',                    search: ['ペキニーズ', 'ペキ'] },
+  { display: 'ウエストハイランドホワイトテリア', search: ['ウエストハイランドホワイトテリア', 'ウエスティ', 'ウェスティ', 'ウエスト'] },
+  { display: 'マルプー',                      search: ['マルプー', 'マルチーズプードル'] },
+  { display: 'トイプードル',                  search: ['トイプードル', 'トイプー', 'プードル', 'トイ'] },
+  { display: 'シュナウザー',                  search: ['シュナウザー', 'シュナ', 'ミニチュアシュナウザー'] },
+  { display: 'スピッツ',                      search: ['スピッツ', '日本スピッツ'] },
+  { display: 'ビションフリーゼ',              search: ['ビションフリーゼ', 'ビション'] },
+  { display: 'キャバリア',                    search: ['キャバリア', 'キャバリアキングチャールズ'] },
+  { display: 'イングリッシュコッカースパニエル', search: ['イングリッシュコッカースパニエル', 'Eコッカー', 'イングリッシュコッカー'] },
+  { display: 'コーギー',                      search: ['コーギー', 'ウェルシュコーギー'] },
+  { display: 'ビーグル',                      search: ['ビーグル'] },
+  { display: '柴',                            search: ['柴', '柴犬', 'しば', 'シバ'] },
+  { display: 'ブルドッグ',                    search: ['ブルドッグ'] },
+  { display: 'シェルティー',                  search: ['シェルティー', 'シェルティ', 'シェットランドシープドッグ'] },
+  { display: 'コリー',                        search: ['コリー'] },
+  { display: 'アメリカンコッカースパニエル',  search: ['アメリカンコッカースパニエル', 'Aコッカー', 'アメコッカー', 'アメリカンコッカー'] },
+  { display: 'ダルメシアン',                  search: ['ダルメシアン'] },
+  { display: 'ラブラドールレトリーバー',      search: ['ラブラドールレトリーバー', 'ラブラドール', 'ラブ'] },
+  { display: 'シベリアンハスキー',            search: ['シベリアンハスキー', 'ハスキー'] },
+  { display: 'ゴールデンレトリバー',          search: ['ゴールデンレトリバー', 'ゴールデン'] },
+  { display: 'スタンダードプードル',          search: ['スタンダードプードル', 'スタプー', 'プードル', 'スタンダード'] },
+  { display: 'バーニーズ',                    search: ['バーニーズ', 'バーニーズマウンテンドッグ'] },
+  { display: 'ミックス犬（2犬種）',           search: ['ミックス', 'ミックス犬', '雑種', 'mix', 'MIX', 'ミクスト'], isMix: true },
+];
+
+// ミックス犬の2犬種選択用リスト（純血種のみ）
+const MIX_BREED_LIST = BREED_DATA.filter(b => !b.isMix).map(b => b.display);
+
+let selectedBreed = '';      // 選択された犬種名
+let selectedMixBreeds = [];  // ミックス犬の場合の2犬種
+let isMixSelected = false;   // ミックス犬選択中フラグ
+
+// フォーカス時：全犬種を表示
+function onBreedFocus() {
+  if (document.getElementById('dog_breed').value) return;
+  const dropdown = document.getElementById('breed-dropdown');
+  dropdown.innerHTML = BREED_DATA.map(b =>
+    `<div class="breed-option${b.isMix ? ' breed-option-mix' : ''}"
+      onclick="selectBreed('${b.display}', ${b.isMix ? 'true' : 'false'})">
+      ${b.isMix ? '🐾 ' : ''}${b.display}
+    </div>`
+  ).join('');
+  hide('breed-no-match');
+  show('breed-dropdown');
+}
+
+// 検索入力時
+function hiraganaToKatakana(str) {
+  // NFC正規化：Androidの分解された濁点（こ゛→ご）を結合してから変換
+  return str.normalize('NFC').replace(/[\u3041-\u3096]/g, c =>
+    String.fromCharCode(c.charCodeAt(0) + 0x60)
+  );
+}
+
+function onBreedSearch(val) {
+  const q = val.trim();
+  const qKata = hiraganaToKatakana(q); // ひらがな→カタカナ変換
+  const dropdown = document.getElementById('breed-dropdown');
+
+  // 選択済みなら何もしない
+  if (document.getElementById('dog_breed').value && !q) return;
+
+  if (!q) { hide('breed-dropdown'); hide('breed-no-match'); return; }
+
+  const matches = BREED_DATA.filter(b =>
+    b.search.some(s => 
+      s.toLowerCase().includes(q.toLowerCase()) ||
+      s.toLowerCase().includes(qKata.toLowerCase())
+    )
+  );
+
+  hide('breed-no-match');
+
+  if (matches.length === 0) {
+    hide('breed-dropdown');
+    show('breed-no-match');
+    return;
+  }
+
+  dropdown.innerHTML = matches.map(b =>
+    `<div class="breed-option${b.isMix ? ' breed-option-mix' : ''}"
+      onclick="selectBreed('${b.display}', ${b.isMix || false})">
+      ${b.isMix ? '🐾 ' : ''}${b.display}
+    </div>`
+  ).join('');
+  show('breed-dropdown');
+}
+
+// 犬種選択
+function selectBreed(name, isMix) {
+  hide('breed-dropdown');
+  hide('breed-no-match');
+
+  // 入力欄をクリアして選択タグを表示
+  document.getElementById('dog_breed_input').value = '';
+  document.getElementById('dog_breed_input').style.display = 'none';
+
+  document.getElementById('breed-selected-text').textContent = name;
+  show('breed-selected');
+
+  if (isMix) {
+    document.getElementById('dog_breed').value = ''; // ミックスは2犬種確定後にセット
+    selectedMixBreeds = [];
+    isMixSelected = true;
+    renderBreedGrid();
+    show('mix-breed-selector');
+  } else {
+    document.getElementById('dog_breed').value = name;
+    selectedBreed = name;
+    isMixSelected = false;
+    hide('mix-breed-selector');
+    selectedMixBreeds = [];
+  }
+}
+
+// 選択解除
+function clearBreedSelection() {
+  document.getElementById('dog_breed').value = '';
+  document.getElementById('dog_breed_input').value = '';
+  document.getElementById('dog_breed_input').style.display = '';
+  hide('breed-selected');
+  hide('mix-breed-selector');
+  hide('breed-no-match');
+  selectedBreed = '';
+  selectedMixBreeds = [];
+  isMixSelected = false;
+  document.getElementById('dog_breed_input').focus();
+}
+
+// ミックス犬のグリッド描画
+function renderBreedGrid() {
+  document.getElementById('breed-grid').innerHTML = MIX_BREED_LIST.map(breed =>
+    `<label class="breed-check-btn">
+      <input type="checkbox" name="mix_breed" value="${breed}" onchange="onBreedCheckChange()">
+      ${breed}
+    </label>`
+  ).join('');
+}
+
+// ミックス犬チェック変更時
+function onBreedCheckChange() {
+  selectedMixBreeds = [...document.querySelectorAll('input[name="mix_breed"]:checked')].map(e => e.value);
+
+  // 2つ選択済み → 残りdisabled
+  document.querySelectorAll('.breed-check-btn').forEach(btn => {
+    const inp = btn.querySelector('input');
+    btn.classList.toggle('disabled', !inp.checked && selectedMixBreeds.length >= 2);
+  });
+
+  // dog_breedの値を更新
+  if (selectedMixBreeds.length > 0) {
+    document.getElementById('dog_breed').value = selectedMixBreeds.join('×');
+    document.getElementById('breed-selected-text').textContent = 'ミックス犬：' + selectedMixBreeds.join(' × ');
+  } else {
+    document.getElementById('dog_breed').value = '';
+    document.getElementById('breed-selected-text').textContent = 'ミックス犬（2犬種）';
+  }
+
+  const d = document.getElementById('mix-selected-display');
+  d.textContent = selectedMixBreeds.length > 0 ? '選択中：' + selectedMixBreeds.join(' × ') : '';
+}
+
+// ════════════════════════════════
+// 2頭目犬種検索（1頭目と同じロジック）
+// ════════════════════════════════
+let selectedBreed2 = '';
+let selectedMixBreeds2 = [];
+let isMixSelected2 = false;
+
+function onBreedFocus2() {
+  if (document.getElementById('dog_breed_2').value) return;
+  const dd = document.getElementById('breed-dropdown-2');
+  dd.innerHTML = BREED_DATA.map(b =>
+    `<div class="breed-option${b.isMix ? ' breed-option-mix' : ''}"
+      onclick="selectBreed2('${b.display}', ${b.isMix ? 'true' : 'false'})">
+      ${b.isMix ? '🐾 ' : ''}${b.display}
+    </div>`
+  ).join('');
+  hide('breed-no-match-2');
+  show('breed-dropdown-2');
+}
+
+function onBreedSearch2(val) {
+  const q = val.trim();
+  const qKata = hiraganaToKatakana(q);
+  const dd = document.getElementById('breed-dropdown-2');
+  if (document.getElementById('dog_breed_2').value && !q) return;
+  if (!q) { hide('breed-dropdown-2'); hide('breed-no-match-2'); return; }
+  const matches = BREED_DATA.filter(b =>
+    b.search.some(s => s.toLowerCase().includes(q.toLowerCase()) || s.toLowerCase().includes(qKata.toLowerCase()))
+  );
+  hide('breed-no-match-2');
+  if (matches.length === 0) { hide('breed-dropdown-2'); show('breed-no-match-2'); return; }
+  dd.innerHTML = matches.map(b =>
+    `<div class="breed-option${b.isMix ? ' breed-option-mix' : ''}"
+      onclick="selectBreed2('${b.display}', ${b.isMix ? 'true' : 'false'})">
+      ${b.isMix ? '🐾 ' : ''}${b.display}
+    </div>`
+  ).join('');
+  show('breed-dropdown-2');
+}
+
+function selectBreed2(name, isMix) {
+  hide('breed-dropdown-2'); hide('breed-no-match-2');
+  document.getElementById('dog_breed_input_2').value = '';
+  document.getElementById('dog_breed_input_2').style.display = 'none';
+  document.getElementById('breed-selected-text-2').textContent = name;
+  show('breed-selected-2');
+  if (isMix) {
+    document.getElementById('dog_breed_2').value = '';
+    selectedMixBreeds2 = []; isMixSelected2 = true;
+  } else {
+    document.getElementById('dog_breed_2').value = name;
+    selectedBreed2 = name; isMixSelected2 = false;
+  }
+}
+
+function clearBreedSelection2() {
+  document.getElementById('dog_breed_2').value = '';
+  document.getElementById('dog_breed_input_2').value = '';
+  document.getElementById('dog_breed_input_2').style.display = '';
+  hide('breed-selected-2'); hide('breed-no-match-2');
+  selectedBreed2 = ''; selectedMixBreeds2 = []; isMixSelected2 = false;
+  document.getElementById('dog_breed_input_2').focus();
+}
+
+document.addEventListener('click', e => {
+  if (!e.target.closest('#field-dog-breed-2')) hide('breed-dropdown-2');
+});
+
+
+async function submitForm() {
+  const data = collectData();
+  document.getElementById('loading').classList.add('show');
+
+  try {
+    await fetch(WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+      mode: 'no-cors'
+    });
+    hide('screen-confirm');
+    show('screen-done');
+    setStep(4);
+    window.scrollTo(0, 0);
+  } catch(e) {
+    alert('送信に失敗しました。通信状況を確認してお電話ください。\n📞 050-8893-0169');
+  } finally {
+    document.getElementById('loading').classList.remove('show');
+  }
+}
+</script>
+</body>
+</html>
