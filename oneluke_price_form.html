@@ -276,6 +276,14 @@
     color: var(--brand-dark); min-height: 20px; text-align: center;
   }
 
+  /* ★修正2・3：犬種注意書きのスタイル */
+  .breed-hint {
+    font-size: 0.74rem; color: var(--text-light);
+    margin-bottom: 6px; padding: 6px 10px;
+    background: #f0fffe; border-radius: 6px;
+    border-left: 3px solid var(--brand);
+  }
+
   .loading-overlay {
     display: none; position: fixed; inset: 0;
     background: rgba(255,255,255,0.85); z-index: 100;
@@ -370,6 +378,8 @@
 
         <div class="field" id="field-dog-breed">
           <label class="field-label">犬種 <span class="required">必須</span></label>
+          <!-- ★修正2：犬種入力注意書き追加 -->
+          <p class="breed-hint">💡 候補リストから選んでタップしてください（直接入力はできません）</p>
           <div class="breed-search-wrap">
             <input type="text" id="dog_breed_input"
               placeholder="犬種を入力（例：トイ、ポメ、マルプー）"
@@ -476,6 +486,8 @@
           <div class="card-title">✂️ 2頭目のトリミング詳細</div>
           <div class="field" id="field-dog-breed-2">
             <label class="field-label">2頭目の犬種 <span class="required">必須</span></label>
+            <!-- ★修正3：2頭目にも犬種入力注意書き追加 -->
+            <p class="breed-hint">💡 候補リストから選んでタップしてください（直接入力はできません）</p>
             <div class="breed-search-wrap">
               <input type="text" id="dog_breed_input_2"
                 placeholder="犬種を入力（例：トイ、ポメ、マルプー）"
@@ -579,16 +591,13 @@
           </div>
         </div>
 
-        <!-- ★変更①：犬・猫両方に体重フィールドを表示（ラベルはJS側で動的変更） -->
         <div class="field section-hidden" id="field-weight">
           <label class="field-label" id="label-weight">1頭目の体重（kg） <span class="required">必須</span></label>
           <input type="number" id="weight" min="0.1" max="60" step="0.1" placeholder="例：5.5" oninput="onWeightChange()">
-          <!-- ★変更②：猫向けの説明文を追加 -->
           <div class="info-box">犬は体重により料金が変わります。猫は任意ですが、相部屋ご希望の場合は合算体重確認のためご入力ください。</div>
           <p class="field-error-msg" id="err-weight"></p>
         </div>
 
-        <!-- ★変更③：犬・猫両方に2頭目体重を表示 -->
         <div class="field section-hidden" id="field-weight2">
           <label class="field-label" id="label-weight2">2頭目の体重（kg） <span class="required">必須</span></label>
           <input type="number" id="weight2" min="0.1" max="60" step="0.1" placeholder="例：4.0" oninput="onWeightChange()">
@@ -853,13 +862,14 @@ function onSharedChange() { updateHotelFlow(); }
 function onWeightChange() { updateRoomRestrictions(); updateHotelFlow(); }
 function onRoomChange() { updateWalkVisibility(); }
 
-// ★メイン修正箇所：updateHotelFlow()
+// ★修正1：updateHotelFlow() - 猫のとき2頭目トリミングを非表示にするチェックを追加
 function updateHotelFlow() {
   const petType = document.querySelector('input[name="pet_type"]:checked')?.value;
   const count   = document.querySelector('input[name="pet_count"]:checked')?.value;
   const shared  = document.querySelector('input[name="is_shared"]:checked')?.value;
   const isMulti = count && count !== '1';
   const is3plus = count === '3';
+  const isCat   = petType === '猫';
 
   toggle('field-count-tel', is3plus);
   if (is3plus) {
@@ -868,12 +878,9 @@ function updateHotelFlow() {
     return;
   }
 
-  // ★変更①：犬・猫とも体重フィールドを表示
   toggle('field-weight', !!petType);
-  // ★変更②：2頭目体重も犬・猫とも表示
   toggle('field-weight2', !!petType && isMulti);
 
-  // ★変更③：ラベルを犬・猫で切り替え（犬：必須 / 猫：任意）
   const weightLabel = document.getElementById('label-weight');
   if (weightLabel) {
     const req = petType === '犬'
@@ -912,7 +919,8 @@ function updateHotelFlow() {
   toggle('field-checkin', roomReady);
   toggle('field-checkout', roomReady);
 
-  const show2ndTrimming = currentCategory === 'combined' && isMulti && !is3plus;
+  // ★修正1のキー行：isCat を追加して猫のとき2頭目トリミングを非表示
+  const show2ndTrimming = currentCategory === 'combined' && isMulti && !is3plus && !isCat;
   toggle('section-trimming-2', show2ndTrimming);
 
   if (roomReady) updateRoomRestrictions();
@@ -1125,7 +1133,6 @@ function validate() {
     const is3plus = count === '3';
 
     if (!is3plus) {
-      // ★バリデーション：犬のみ体重必須・猫は任意
       if (petType === '犬' && !document.getElementById('weight').value) {
         setFieldError('field-weight', 'err-weight', '体重を入力してください'); hasError = true;
       } else { setFieldError('field-weight', 'err-weight', ''); }
