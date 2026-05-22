@@ -390,7 +390,7 @@
         </div>
       </div>
       <div class="card">
-        <div class="card-title">✂️ トリミングの詳細</div>
+        <div class="card-title" id="trim-card-title-1">✂️ トリミングの詳細</div>
 
         <div class="field" id="field-dog-breed">
           <label class="field-label">犬種 <span class="required">必須</span></label>
@@ -492,6 +492,27 @@
             <label class="radio-btn"><input type="radio" name="este_courses" value="シルク泡パックコース"><span class="btn-text"><span class="btn-label">シルク泡パックコース</span><span class="btn-price">+1,730円</span></span></label>
             <label class="radio-btn"><input type="radio" name="este_courses" value="ジェルパックコース"><span class="btn-text"><span class="btn-label">ジェルパックコース</span><span class="btn-price">+1,730円</span></span></label>
             <label class="radio-btn"><input type="radio" name="este_courses" value="極上エステコース"><span class="btn-text"><span class="btn-label">極上エステコース</span><span class="btn-price">+2,650円</span></span></label>
+          </div>
+        </div>
+      </div>
+
+      <!-- 2頭目トリミング希望選択 -->
+      <div id="field-want-trim-2" class="section-hidden">
+        <div class="card">
+          <div class="card-title">✂️ 2頭目のトリミング</div>
+          <div class="field" style="margin-bottom:0;">
+            <label class="field-label">2頭目もトリミングを希望しますか？ <span class="required">必須</span></label>
+            <div class="radio-group horizontal">
+              <label class="radio-btn" style="flex:1">
+                <input type="radio" name="want_trim_2" value="true" onchange="onWantTrim2Change()">
+                <span class="btn-text"><span class="btn-label">希望する</span></span>
+              </label>
+              <label class="radio-btn" style="flex:1">
+                <input type="radio" name="want_trim_2" value="false" onchange="onWantTrim2Change()">
+                <span class="btn-text"><span class="btn-label">希望しない</span></span>
+              </label>
+            </div>
+            <p class="field-error-msg" id="err-want-trim-2"></p>
           </div>
         </div>
       </div>
@@ -991,12 +1012,37 @@ function updateHotelFlow() {
   toggle('field-checkin', roomReady);
   toggle('field-checkout', roomReady);
 
-  // ★修正1のキー行：isCat を追加して猫のとき2頭目トリミングを非表示
-  const show2ndTrimming = currentCategory === 'combined' && isMulti && !is3plus && !isCat;
-  toggle('section-trimming-2', show2ndTrimming);
+  // 2頭目トリミング希望選択の表示制御
+  const show2ndTrimmingToggle = currentCategory === 'combined' && isMulti && !is3plus && !isCat;
+  toggle('field-want-trim-2', show2ndTrimmingToggle);
+  if (show2ndTrimmingToggle) {
+    const want2 = document.querySelector('input[name="want_trim_2"]:checked')?.value;
+    toggle('section-trimming-2', want2 === 'true');
+    const trimTitle1 = document.getElementById('trim-card-title-1');
+    if (trimTitle1) trimTitle1.textContent = want2 === 'true' ? '✂️ 1頭目のトリミングの詳細' : '✂️ トリミングの詳細';
+  } else {
+    hide('section-trimming-2');
+    const trimTitle1 = document.getElementById('trim-card-title-1');
+    if (trimTitle1) trimTitle1.textContent = '✂️ トリミングの詳細';
+  }
 
   if (roomReady) updateRoomRestrictions();
   updateWalkVisibility();
+}
+
+function onWantTrim2Change() {
+  const want = document.querySelector('input[name="want_trim_2"]:checked')?.value;
+  const trimTitle1 = document.getElementById('trim-card-title-1');
+  if (want === 'true') {
+    toggle('section-trimming-2', true);
+    if (trimTitle1) trimTitle1.textContent = '✂️ 1頭目のトリミングの詳細';
+  } else {
+    hide('section-trimming-2');
+    if (trimTitle1) trimTitle1.textContent = '✂️ トリミングの詳細';
+  }
+  // エラー表示クリア
+  const errEl = document.getElementById('err-want-trim-2');
+  if (errEl) errEl.textContent = '';
 }
 
 function updateRoomRestrictions() {
@@ -1242,6 +1288,19 @@ function validate() {
     } else { setFieldError('field-course', 'err-course', ''); }
   }
 
+  // 2頭目トリミング希望の未選択チェック
+  const wantTrim2Field = document.getElementById('field-want-trim-2');
+  const wantTrim2FieldVisible = wantTrim2Field && wantTrim2Field.style.display !== 'none';
+  const wantTrim2Val = document.querySelector('input[name="want_trim_2"]:checked')?.value;
+  if (wantTrim2FieldVisible && !wantTrim2Val) {
+    const errEl = document.getElementById('err-want-trim-2');
+    if (errEl) errEl.textContent = '2頭目のトリミング希望を選択してください';
+    hasError = true;
+  } else {
+    const errEl = document.getElementById('err-want-trim-2');
+    if (errEl) errEl.textContent = '';
+  }
+
   const show2nd = currentCategory === 'combined' &&
     document.getElementById('section-trimming-2') &&
     document.getElementById('section-trimming-2').style.display !== 'none';
@@ -1378,13 +1437,17 @@ function buildConfirmRows() {
     if (opts.length) rows.push(['追加オプション', opts.join('、')]);
     const esteVal = document.querySelector('input[name="este_courses"]:checked')?.value;
     if (esteVal && esteVal !== 'なし') rows.push(['エステコース', esteVal]);
-    if (document.getElementById('dog_breed_2').value) {
+    const wantTrim2Confirm = document.querySelector('input[name="want_trim_2"]:checked')?.value;
+    if (wantTrim2Confirm === 'true') {
+      rows.push(['2頭目のトリミング', '希望する']);
       rows.push(['2頭目の犬種', document.getElementById('dog_breed_2').value]);
       rows.push(['2頭目のコース', document.querySelector('input[name="course_type_2"]:checked')?.value]);
       const opts2 = [...document.querySelectorAll('input[name="options_2"]:checked')].map(e=>e.value);
       if (opts2.length) rows.push(['2頭目の追加オプション', opts2.join('、')]);
       const este2 = document.querySelector('input[name="este_courses_2"]:checked')?.value;
       if (este2 && este2 !== 'なし') rows.push(['2頭目のエステコース', este2]);
+    } else if (wantTrim2Confirm === 'false') {
+      rows.push(['2頭目のトリミング', '希望しない']);
     }
   }
   if (currentCategory === 'hotel' || currentCategory === 'combined') {
@@ -1433,11 +1496,20 @@ function collectData() {
     data.options = [...document.querySelectorAll('input[name="options"]:checked')].map(e=>e.value);
     const esteVal = document.querySelector('input[name="este_courses"]:checked')?.value;
     data.este_courses = (esteVal && esteVal !== 'なし') ? [esteVal] : [];
-    data.dog_breed_2 = document.getElementById('dog_breed_2')?.value.trim() || '';
-    data.course_type_2 = document.querySelector('input[name="course_type_2"]:checked')?.value || '';
-    data.options_2 = [...document.querySelectorAll('input[name="options_2"]:checked')].map(e=>e.value);
-    const este2 = document.querySelector('input[name="este_courses_2"]:checked')?.value;
-    data.este_courses_2 = (este2 && este2 !== 'なし') ? [este2] : [];
+    const wantTrim2Data = document.querySelector('input[name="want_trim_2"]:checked')?.value;
+    data.want_trim_2 = wantTrim2Data === 'true';
+    if (wantTrim2Data === 'true') {
+      data.dog_breed_2 = document.getElementById('dog_breed_2')?.value.trim() || '';
+      data.course_type_2 = document.querySelector('input[name="course_type_2"]:checked')?.value || '';
+      data.options_2 = [...document.querySelectorAll('input[name="options_2"]:checked')].map(e=>e.value);
+      const este2 = document.querySelector('input[name="este_courses_2"]:checked')?.value;
+      data.este_courses_2 = (este2 && este2 !== 'なし') ? [este2] : [];
+    } else {
+      data.dog_breed_2 = '';
+      data.course_type_2 = '';
+      data.options_2 = [];
+      data.este_courses_2 = [];
+    }
   }
   if (cat === 'hotel' || cat === 'combined') {
     data.pet_type = document.querySelector('input[name="pet_type"]:checked')?.value || '';
