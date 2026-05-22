@@ -264,6 +264,7 @@
   }
   .mix-note small { color: var(--text-light); display: block; margin-top: 2px; }
   .breed-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: 10px; }
+  .walk-caution { font-size: 0.72rem; color: var(--text-light); margin-top: 8px; line-height: 1.5; }
   .breed-check-btn {
     display: flex; align-items: center; gap: 6px;
     padding: 9px 10px; border: 2px solid var(--border); border-radius: 8px;
@@ -676,6 +677,7 @@
               <span class="btn-text"><span class="btn-label">希望しない</span></span>
             </label>
           </div>
+          <p class="walk-caution">※早朝のお帰りや17時以降のお預かりの場合は、お散歩のご対応ができない場合がございます</p>
           <div class="section-hidden field" id="field-walk-days-1" style="margin-top:10px;">
             <label class="field-label" id="label-walk-days-1" style="margin-bottom:4px;">散歩希望日数 <span class="required">必須</span></label>
             <input type="number" id="walk_days_1" min="1" step="1" placeholder="例：3" oninput="clampWalkDays(1)">
@@ -717,6 +719,7 @@
               <span class="btn-text"><span class="btn-label">希望しない</span></span>
             </label>
           </div>
+          <p class="walk-caution">※早朝のお帰りや17時以降のお預かりの場合は、お散歩のご対応ができない場合がございます</p>
           <div class="section-hidden field" id="field-walk-days-2" style="margin-top:10px;">
             <label class="field-label" id="label-walk-days-2" style="margin-bottom:4px;">散歩希望日数 <span class="required">必須</span></label>
             <input type="number" id="walk_days_2" min="1" step="1" placeholder="例：3" oninput="clampWalkDays(2)">
