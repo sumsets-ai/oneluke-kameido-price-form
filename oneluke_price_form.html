@@ -152,6 +152,8 @@
 
   .datetime-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .datetime-row select { font-size: 0.82rem; padding: 10px 10px; }
+  .date-select-row { display: flex; gap: 4px; }
+  .date-select-row select { font-size: 0.78rem; padding: 8px 2px; flex: 1; min-width: 0; }
 
   .info-box {
     background: var(--brand-light); border-left: 4px solid var(--brand);
@@ -726,7 +728,11 @@
         <div class="field section-hidden" id="field-checkin">
           <label class="field-label">チェックイン日時 <span class="required">必須</span></label>
           <div class="datetime-row">
-            <input type="date" id="checkin_date" onchange="onCheckinDateChange()">
+            <div class="date-select-row">
+              <select id="checkin_year" onchange="onCheckinDateChange()"><option value="">年</option></select>
+              <select id="checkin_month" onchange="onCheckinDateChange()"><option value="">月</option></select>
+              <select id="checkin_day" onchange="onCheckinDateChange()"><option value="">日</option></select>
+            </div>
             <select id="checkin_time" onchange="updateWalkVisibility()"><option value="">時間を選択</option></select>
           </div>
           <p class="field-error-msg" id="err-checkin"></p>
@@ -735,7 +741,11 @@
         <div class="field section-hidden" id="field-checkout">
           <label class="field-label">チェックアウト日時 <span class="required">必須</span></label>
           <div class="datetime-row">
-            <input type="date" id="checkout_date" onchange="updateWalkVisibility()">
+            <div class="date-select-row">
+              <select id="checkout_year" onchange="updateWalkVisibility()"><option value="">年</option></select>
+              <select id="checkout_month" onchange="updateWalkVisibility()"><option value="">月</option></select>
+              <select id="checkout_day" onchange="updateWalkVisibility()"><option value="">日</option></select>
+            </div>
             <select id="checkout_time" onchange="updateWalkVisibility()"><option value="">時間を選択</option></select>
           </div>
           <p class="field-error-msg" id="err-checkout"></p>
@@ -817,9 +827,36 @@ function buildTimeOptions(selectEl) {
 buildTimeOptions(document.getElementById('checkin_time'));
 buildTimeOptions(document.getElementById('checkout_time'));
 
-const today = new Date().toISOString().split('T')[0];
-document.getElementById('checkin_date').min = today;
-document.getElementById('checkout_date').min = today;
+function buildDateSelects(prefix) {
+  const yearEl  = document.getElementById(`${prefix}_year`);
+  const monthEl = document.getElementById(`${prefix}_month`);
+  const dayEl   = document.getElementById(`${prefix}_day`);
+  const cy = new Date().getFullYear();
+  for (let y = cy; y <= cy + 2; y++) {
+    const o = document.createElement('option'); o.value = y; o.textContent = y + '年'; yearEl.appendChild(o);
+  }
+  for (let m = 1; m <= 12; m++) {
+    const o = document.createElement('option'); o.value = String(m).padStart(2,'0'); o.textContent = m + '月'; monthEl.appendChild(o);
+  }
+  for (let d = 1; d <= 31; d++) {
+    const o = document.createElement('option'); o.value = String(d).padStart(2,'0'); o.textContent = d + '日'; dayEl.appendChild(o);
+  }
+}
+buildDateSelects('checkin');
+buildDateSelects('checkout');
+
+function getCheckinDate() {
+  const y = document.getElementById('checkin_year')?.value;
+  const m = document.getElementById('checkin_month')?.value;
+  const d = document.getElementById('checkin_day')?.value;
+  return (y && m && d) ? `${y}-${m}-${d}` : '';
+}
+function getCheckoutDate() {
+  const y = document.getElementById('checkout_year')?.value;
+  const m = document.getElementById('checkout_month')?.value;
+  const d = document.getElementById('checkout_day')?.value;
+  return (y && m && d) ? `${y}-${m}-${d}` : '';
+}
 
 let currentCategory = '';
 
@@ -998,9 +1035,9 @@ function applyRoomRestriction(labelId, descId, disabled, descText) {
 function onWalkChange() { updateWalkVisibility(); }
 
 function calcStayInfo() {
-  const cinDate = document.getElementById('checkin_date')?.value;
+  const cinDate = getCheckinDate();
   const cinTime = document.getElementById('checkin_time')?.value;
-  const coutDate = document.getElementById('checkout_date')?.value;
+  const coutDate = getCheckoutDate();
   const coutTime = document.getElementById('checkout_time')?.value;
   if (!cinDate || !cinTime || !coutDate || !coutTime) return null;
   const cinDt  = new Date(`${cinDate}T${cinTime}`);
@@ -1018,9 +1055,9 @@ function calcStayInfo() {
 }
 
 function calcMaxWalkDays() {
-  const cinDate = document.getElementById('checkin_date')?.value;
+  const cinDate = getCheckinDate();
   const cinTime = document.getElementById('checkin_time')?.value;
-  const coutDate = document.getElementById('checkout_date')?.value;
+  const coutDate = getCheckoutDate();
   if (!cinDate || !coutDate) return null;
   const d1 = new Date(cinDate);
   const d2 = new Date(coutDate);
@@ -1149,14 +1186,13 @@ function updateWeightLabel() {}
 function setRoomOption() {}
 
 function onCheckinDateChange() {
-  const cinDate = document.getElementById('checkin_date').value;
-  const coutDateEl = document.getElementById('checkout_date');
-  if (cinDate) {
-    coutDateEl.min = cinDate;
-    if (coutDateEl.value && coutDateEl.value < cinDate) {
-      coutDateEl.value = '';
-      document.getElementById('checkout_time').value = '';
-    }
+  const cinDate  = getCheckinDate();
+  const coutDate = getCheckoutDate();
+  if (cinDate && coutDate && coutDate < cinDate) {
+    document.getElementById('checkout_year').value  = '';
+    document.getElementById('checkout_month').value = '';
+    document.getElementById('checkout_day').value   = '';
+    document.getElementById('checkout_time').value  = '';
   }
   updateWalkVisibility();
 }
@@ -1248,14 +1284,14 @@ function validate() {
         setFieldError('field-room-type2', 'err-room_type2', '2頭目の部屋タイプを選択してください'); hasError = true;
       } else { setFieldError('field-room-type2', 'err-room_type2', ''); }
 
-      const cinDate = document.getElementById('checkin_date').value;
+      const cinDate = getCheckinDate();
       const cinTime = document.getElementById('checkin_time').value;
       const noCheckin = !cinDate || !cinTime;
       if (noCheckin) {
         setFieldError('field-checkin', 'err-checkin', 'チェックイン日時を入力してください'); hasError = true;
       } else { setFieldError('field-checkin', 'err-checkin', ''); }
 
-      const coutDate = document.getElementById('checkout_date').value;
+      const coutDate = getCheckoutDate();
       const coutTime = document.getElementById('checkout_time').value;
       const noCheckout = !coutDate || !coutTime;
       if (noCheckout) {
@@ -1359,8 +1395,8 @@ function buildConfirmRows() {
     rows.push(['部屋タイプ', document.querySelector('input[name="room_type"]:checked')?.value]);
     const rt2 = document.querySelector('input[name="room_type2"]:checked')?.value;
     if (rt2) rows.push(['2頭目の部屋タイプ', rt2]);
-    const cin = document.getElementById('checkin_date').value + ' ' + document.getElementById('checkin_time').value;
-    const cout = document.getElementById('checkout_date').value + ' ' + document.getElementById('checkout_time').value;
+    const cin = getCheckinDate() + ' ' + document.getElementById('checkin_time').value;
+    const cout = getCheckoutDate() + ' ' + document.getElementById('checkout_time').value;
     rows.push(['チェックイン', cin]);
     rows.push(['チェックアウト', cout]);
     const stayInfo = calcStayInfo();
@@ -1405,8 +1441,8 @@ function collectData() {
     data.weight = isNaN(w) ? null : w;
     data.room_type = document.querySelector('input[name="room_type"]:checked')?.value || '';
     data.room_type2 = document.querySelector('input[name="room_type2"]:checked')?.value || '';
-    data.checkin_datetime = document.getElementById('checkin_date').value + ' ' + document.getElementById('checkin_time').value;
-    data.checkout_datetime = document.getElementById('checkout_date').value + ' ' + document.getElementById('checkout_time').value;
+    data.checkin_datetime = getCheckinDate() + ' ' + document.getElementById('checkin_time').value;
+    data.checkout_datetime = getCheckoutDate() + ' ' + document.getElementById('checkout_time').value;
     data.pet_count = parseInt(document.querySelector('input[name="pet_count"]:checked')?.value || 1);
     const shared = document.querySelector('input[name="is_shared"]:checked');
     data.is_shared = shared?.value === 'true';
