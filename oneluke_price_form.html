@@ -1064,6 +1064,7 @@ function calcMaxWalkDays() {
   const diffMs = d2 - d1;
   if (diffMs <= 0) return null;
   let nights = Math.round(diffMs / (1000 * 60 * 60 * 24));
+  // 17時以降チェックインは実質1泊少なくなる
   if (cinTime && cinTime >= '17:00') { nights = Math.max(0, nights - 1); }
   return nights;
 }
@@ -1116,9 +1117,9 @@ function updateWalkVisibility() {
         // 日程が入力されたタイミングで既入力値をクランプ（maxDays>0 のときのみ下限1を保証）
         if (inp1.value && parseInt(inp1.value) > maxDays) inp1.value = maxDays;
         if (inp1.value && maxDays >= 1 && parseInt(inp1.value) < 1) inp1.value = 1;
-        const cinTime = document.getElementById('checkin_time')?.value;
-        const lateNote = (cinTime && cinTime >= '17:00') ? '（17時以降チェックインのため宿泊数−1日）' : '';
-        if (hint1) hint1.textContent = `最大 ${maxDays} 日まで${lateNote}`;
+        const cinTime1 = document.getElementById('checkin_time')?.value;
+        const lateNote1 = (cinTime1 && cinTime1 >= '17:00') ? '（17時以降チェックインのため宿泊数−1日）' : '';
+        if (hint1) hint1.textContent = `最大 ${maxDays} 日まで${lateNote1}`;
       } else {
         inp1.max = '';
         inp1.placeholder = '例：3';
