@@ -158,9 +158,10 @@
 
   .section-hidden { display: none; }
 
-  .datetime-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .datetime-row select { font-size: 0.82rem; padding: 10px 10px; }
-  .date-select-row { display: flex; gap: 4px; }
+  /* 日時行：gridからflexに変更（Android WebViewのgridタッチバグ回避） */
+  .datetime-row { display: flex; flex-wrap: wrap; gap: 8px; align-items: stretch; }
+  .date-select-row { display: flex; gap: 4px; flex: 1 1 58%; min-width: 0; }
+  .datetime-row > select { flex: 1 1 36%; min-width: 0; font-size: 0.9rem; padding: 10px 8px; touch-action: manipulation; }
   .date-select-row select { font-size: 0.85rem; padding: 10px 4px; flex: 1; min-width: 0; touch-action: manipulation; }
 
   .info-box {
@@ -335,7 +336,7 @@
     <span class="paw">🐾</span>
     <div>
       <h1>ワンルーク江東区亀戸店</h1>
-      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0523b</span></p>
+      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0524</span></p>
     </div>
   </div>
 </header>
