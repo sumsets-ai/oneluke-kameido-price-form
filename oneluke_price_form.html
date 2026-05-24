@@ -321,6 +321,14 @@
 </head>
 <body>
 
+<!-- LINE内ブラウザ検知バナー -->
+<div id="line-browser-warning" style="display:none; background:#e8380d; color:#fff; padding:16px 18px; text-align:center; font-weight:700; line-height:1.9; position:sticky; top:0; z-index:200;">
+  ⚠️ LINE内ブラウザでは日時の入力ができません<br>
+  <span style="font-size:0.82rem; font-weight:400; display:block; margin-top:2px;">
+    📱 画面右下の <strong>「•••」</strong> ボタン<br>→ <strong>「外部ブラウザで開く」</strong> をタップしてください
+  </span>
+</div>
+
 <div class="loading-overlay" id="loading">
   <div class="spinner"></div>
   <p>送信中です…</p>
@@ -331,7 +339,7 @@
     <span class="paw">🐾</span>
     <div>
       <h1>ワンルーク江東区亀戸店</h1>
-      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0526</span></p>
+      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0527</span></p>
     </div>
   </div>
 </header>
@@ -826,6 +834,14 @@
 </main>
 
 <script>
+// LINE内ブラウザ検知 → 外部ブラウザ誘導バナー表示
+(function() {
+  if (/Line\//i.test(navigator.userAgent)) {
+    const banner = document.getElementById('line-browser-warning');
+    if (banner) banner.style.display = 'block';
+  }
+})();
+
 const WEBHOOK_URL = 'https://hook.us2.make.com/jo1y2t3qcm6qtar56vru2xmd29mq8afm';
 const urlParams = new URLSearchParams(window.location.search);
 const LINE_USER_ID = urlParams.get('uid') || '';
