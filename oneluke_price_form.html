@@ -111,8 +111,8 @@
     transition: border 0.2s, box-shadow 0.2s;
     -webkit-appearance: none;
   }
-  /* date/time: -webkit-appearance: none を付けない → Android ネイティブピッカーが開く */
-  input[type="date"], input[type="time"] {
+  /* date: -webkit-appearance: none を付けない → Android ネイティブピッカーが開く */
+  input[type="date"] {
     width: 100%; padding: 11px 14px; border: 2px solid var(--border);
     border-radius: 10px; font-size: 0.9rem; font-family: inherit;
     background: var(--white); color: var(--text);
@@ -684,7 +684,34 @@
           <label class="field-label">チェックイン日時 <span class="required">必須</span></label>
           <div class="datetime-row">
             <input type="date" id="checkin_date" onchange="onCheckinDateChange()">
-            <input type="time" id="checkin_time" onchange="updateWalkVisibility()">
+            <select id="checkin_time" onchange="updateWalkVisibility()">
+              <option value="">時間を選択</option>
+              <option value="08:30">08:30</option>
+              <option value="09:00">09:00</option>
+              <option value="09:30">09:30</option>
+              <option value="10:00">10:00</option>
+              <option value="10:30">10:30</option>
+              <option value="11:00">11:00</option>
+              <option value="11:30">11:30</option>
+              <option value="12:00">12:00</option>
+              <option value="12:30">12:30</option>
+              <option value="13:00">13:00</option>
+              <option value="13:30">13:30</option>
+              <option value="14:00">14:00</option>
+              <option value="14:30">14:30</option>
+              <option value="15:00">15:00</option>
+              <option value="15:30">15:30</option>
+              <option value="16:00">16:00</option>
+              <option value="16:30">16:30</option>
+              <option value="17:00">17:00</option>
+              <option value="17:30">17:30</option>
+              <option value="18:00">18:00</option>
+              <option value="18:30">18:30</option>
+              <option value="19:00">19:00</option>
+              <option value="19:30">19:30</option>
+              <option value="20:00">20:00</option>
+              <option value="20:30">20:30</option>
+            </select>
           </div>
           <p class="field-error-msg" id="err-checkin"></p>
         </div>
@@ -693,7 +720,34 @@
           <label class="field-label">チェックアウト日時 <span class="required">必須</span></label>
           <div class="datetime-row">
             <input type="date" id="checkout_date" onchange="updateWalkVisibility()">
-            <input type="time" id="checkout_time" onchange="updateWalkVisibility()">
+            <select id="checkout_time" onchange="updateWalkVisibility()">
+              <option value="">時間を選択</option>
+              <option value="08:30">08:30</option>
+              <option value="09:00">09:00</option>
+              <option value="09:30">09:30</option>
+              <option value="10:00">10:00</option>
+              <option value="10:30">10:30</option>
+              <option value="11:00">11:00</option>
+              <option value="11:30">11:30</option>
+              <option value="12:00">12:00</option>
+              <option value="12:30">12:30</option>
+              <option value="13:00">13:00</option>
+              <option value="13:30">13:30</option>
+              <option value="14:00">14:00</option>
+              <option value="14:30">14:30</option>
+              <option value="15:00">15:00</option>
+              <option value="15:30">15:30</option>
+              <option value="16:00">16:00</option>
+              <option value="16:30">16:30</option>
+              <option value="17:00">17:00</option>
+              <option value="17:30">17:30</option>
+              <option value="18:00">18:00</option>
+              <option value="18:30">18:30</option>
+              <option value="19:00">19:00</option>
+              <option value="19:30">19:30</option>
+              <option value="20:00">20:00</option>
+              <option value="20:30">20:30</option>
+            </select>
           </div>
           <p class="field-error-msg" id="err-checkout"></p>
         </div>
