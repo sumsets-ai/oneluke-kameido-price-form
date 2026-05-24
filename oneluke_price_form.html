@@ -321,14 +321,6 @@
 </head>
 <body>
 
-<!-- LINE内ブラウザ検知バナー -->
-<div id="line-browser-warning" style="display:none; background:#e8380d; color:#fff; padding:16px 18px; text-align:center; font-weight:700; line-height:1.9; position:sticky; top:0; z-index:200;">
-  ⚠️ LINE内ブラウザでは日時の入力ができません<br>
-  <span style="font-size:0.82rem; font-weight:400; display:block; margin-top:2px;">
-    📱 画面右下の <strong>「•••」</strong> ボタン<br>→ <strong>「外部ブラウザで開く」</strong> をタップしてください
-  </span>
-</div>
-
 <div class="loading-overlay" id="loading">
   <div class="spinner"></div>
   <p>送信中です…</p>
@@ -339,12 +331,12 @@
     <span class="paw">🐾</span>
     <div>
       <h1>ワンルーク江東区亀戸店</h1>
-      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0528</span></p>
+      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0529</span></p>
     </div>
   </div>
 </header>
 
-<div class="progress-wrap">
+<div class="progress-wrap" id="progress-wrap" style="display:none;">
   <div class="progress-steps">
     <div class="step active" data-num="1">種類選択</div>
     <div class="step" data-num="2">詳細入力</div>
@@ -355,8 +347,30 @@
 
 <main>
 
+  <!-- SCREEN 0：外部ブラウザ案内 -->
+  <div id="screen-intro">
+    <div class="card" style="background:#d63214; border-radius:16px; padding:28px 20px; text-align:center; box-shadow:0 4px 24px rgba(214,50,20,0.25);">
+      <div style="font-size:2.6rem; margin-bottom:10px;">📱</div>
+      <div style="font-size:1.05rem; font-weight:700; color:#fff; margin-bottom:18px; line-height:1.6;">
+        ご入力の前にご確認ください
+      </div>
+      <div style="background:rgba(255,255,255,0.15); border-radius:12px; padding:18px 16px; text-align:left; color:#fff; margin-bottom:22px; line-height:2.1;">
+        <div style="font-size:0.82rem; margin-bottom:4px; opacity:0.85;">LINEアプリ内では日時入力が動作しません。</div>
+        <div style="font-size:0.95rem; font-weight:700;">
+          ① LINEのURLをタップして開く<br>
+          ② 右下の「・・・」をタップ<br>
+          ③「外部ブラウザで開く」を選択<br>
+          ④ Chrome / Safari で入力する
+        </div>
+      </div>
+      <button class="btn-primary" style="background:#fff; color:#d63214; font-size:1rem;" onclick="goFromIntro()">
+        確認できたら次へ　→
+      </button>
+    </div>
+  </div>
+
   <!-- SCREEN 1：カテゴリ選択 -->
-  <div id="screen-category">
+  <div id="screen-category" class="section-hidden">
     <div class="card">
       <div class="card-title">🐶 ご利用のサービスを選んでください</div>
       <div class="cat-group">
@@ -834,14 +848,6 @@
 </main>
 
 <script>
-// LINE内ブラウザ検知 → 外部ブラウザ誘導バナー表示
-(function() {
-  if (/Line\//i.test(navigator.userAgent)) {
-    const banner = document.getElementById('line-browser-warning');
-    if (banner) banner.style.display = 'block';
-  }
-})();
-
 const WEBHOOK_URL = 'https://hook.us2.make.com/jo1y2t3qcm6qtar56vru2xmd29mq8afm';
 const urlParams = new URLSearchParams(window.location.search);
 const LINE_USER_ID = urlParams.get('uid') || '';
@@ -904,6 +910,14 @@ function goToDetail() {
     }
   }
   setStep(2);
+  window.scrollTo(0, 0);
+}
+
+function goFromIntro() {
+  hide('screen-intro');
+  document.getElementById('progress-wrap').style.display = '';
+  show('screen-category');
+  setStep(1);
   window.scrollTo(0, 0);
 }
 
