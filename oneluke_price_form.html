@@ -104,12 +104,19 @@
     margin-left: 6px; vertical-align: middle;
   }
 
-  input[type="text"], input[type="number"], input[type="date"], select {
+  input[type="text"], input[type="number"], select {
     width: 100%; padding: 11px 14px; border: 2px solid var(--border);
     border-radius: 10px; font-size: 0.9rem; font-family: inherit;
     background: var(--white); color: var(--text);
     transition: border 0.2s, box-shadow 0.2s;
     -webkit-appearance: none;
+  }
+  /* date/time: -webkit-appearance: none を付けない → Android ネイティブピッカーが開く */
+  input[type="date"], input[type="time"] {
+    width: 100%; padding: 11px 14px; border: 2px solid var(--border);
+    border-radius: 10px; font-size: 0.9rem; font-family: inherit;
+    background: var(--white); color: var(--text);
+    transition: border 0.2s, box-shadow 0.2s;
   }
   input:focus, select:focus {
     outline: none; border-color: var(--brand);
@@ -151,9 +158,6 @@
   .section-hidden { display: none; }
 
   .datetime-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .datetime-row select { font-size: 0.82rem; padding: 10px 10px; }
-  .date-select-row { display: flex; gap: 4px; }
-  .date-select-row select { font-size: 0.78rem; padding: 8px 2px; flex: 1; min-width: 0; }
 
   .info-box {
     background: var(--brand-light); border-left: 4px solid var(--brand);
@@ -327,7 +331,7 @@
     <span class="paw">🐾</span>
     <div>
       <h1>ワンルーク江東区亀戸店</h1>
-      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0525</span></p>
+      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0526</span></p>
     </div>
   </div>
 </header>
@@ -752,12 +756,8 @@
         <div class="field section-hidden" id="field-checkin">
           <label class="field-label">チェックイン日時 <span class="required">必須</span></label>
           <div class="datetime-row">
-            <div class="date-select-row">
-              <select id="checkin_year" onchange="onCheckinDateChange()"><option value="">年</option></select>
-              <select id="checkin_month" onchange="onCheckinDateChange()"><option value="">月</option></select>
-              <select id="checkin_day" onchange="onCheckinDateChange()"><option value="">日</option></select>
-            </div>
-            <select id="checkin_time" onchange="updateWalkVisibility()"><option value="">時間を選択</option></select>
+            <input type="date" id="checkin_date" onchange="onCheckinDateChange()">
+            <input type="time" id="checkin_time" onchange="updateWalkVisibility()">
           </div>
           <p class="field-error-msg" id="err-checkin"></p>
         </div>
@@ -765,12 +765,8 @@
         <div class="field section-hidden" id="field-checkout">
           <label class="field-label">チェックアウト日時 <span class="required">必須</span></label>
           <div class="datetime-row">
-            <div class="date-select-row">
-              <select id="checkout_year" onchange="updateWalkVisibility()"><option value="">年</option></select>
-              <select id="checkout_month" onchange="updateWalkVisibility()"><option value="">月</option></select>
-              <select id="checkout_day" onchange="updateWalkVisibility()"><option value="">日</option></select>
-            </div>
-            <select id="checkout_time" onchange="updateWalkVisibility()"><option value="">時間を選択</option></select>
+            <input type="date" id="checkout_date" onchange="updateWalkVisibility()">
+            <input type="time" id="checkout_time" onchange="updateWalkVisibility()">
           </div>
           <p class="field-error-msg" id="err-checkout"></p>
         </div>
@@ -834,52 +830,20 @@ const WEBHOOK_URL = 'https://hook.us2.make.com/jo1y2t3qcm6qtar56vru2xmd29mq8afm'
 const urlParams = new URLSearchParams(window.location.search);
 const LINE_USER_ID = urlParams.get('uid') || '';
 
-function buildTimeOptions(selectEl) {
-  const times = [];
-  for (let h = 8; h <= 20; h++) {
-    ['00','30'].forEach(m => {
-      if (h === 8 && m === '00') return;
-      times.push(`${String(h).padStart(2,'0')}:${m}`);
-    });
-  }
-  times.forEach(t => {
-    const opt = document.createElement('option');
-    opt.value = t; opt.textContent = t;
-    selectEl.appendChild(opt);
-  });
-}
-buildTimeOptions(document.getElementById('checkin_time'));
-buildTimeOptions(document.getElementById('checkout_time'));
-
-function buildDateSelects(prefix) {
-  const yearEl  = document.getElementById(`${prefix}_year`);
-  const monthEl = document.getElementById(`${prefix}_month`);
-  const dayEl   = document.getElementById(`${prefix}_day`);
-  const cy = new Date().getFullYear();
-  for (let y = cy; y <= cy + 2; y++) {
-    const o = document.createElement('option'); o.value = y; o.textContent = y + '年'; yearEl.appendChild(o);
-  }
-  for (let m = 1; m <= 12; m++) {
-    const o = document.createElement('option'); o.value = String(m).padStart(2,'0'); o.textContent = m + '月'; monthEl.appendChild(o);
-  }
-  for (let d = 1; d <= 31; d++) {
-    const o = document.createElement('option'); o.value = String(d).padStart(2,'0'); o.textContent = d + '日'; dayEl.appendChild(o);
-  }
-}
-buildDateSelects('checkin');
-buildDateSelects('checkout');
+// 今日以降の日付のみ選択可能にする
+(function() {
+  const today = new Date().toISOString().split('T')[0];
+  const ci = document.getElementById('checkin_date');
+  const co = document.getElementById('checkout_date');
+  if (ci) ci.min = today;
+  if (co) co.min = today;
+})();
 
 function getCheckinDate() {
-  const y = document.getElementById('checkin_year')?.value;
-  const m = document.getElementById('checkin_month')?.value;
-  const d = document.getElementById('checkin_day')?.value;
-  return (y && m && d) ? `${y}-${m}-${d}` : '';
+  return document.getElementById('checkin_date')?.value || '';
 }
 function getCheckoutDate() {
-  const y = document.getElementById('checkout_year')?.value;
-  const m = document.getElementById('checkout_month')?.value;
-  const d = document.getElementById('checkout_day')?.value;
-  return (y && m && d) ? `${y}-${m}-${d}` : '';
+  return document.getElementById('checkout_date')?.value || '';
 }
 
 let currentCategory = '';
@@ -1238,11 +1202,17 @@ function setRoomOption() {}
 function onCheckinDateChange() {
   const cinDate  = getCheckinDate();
   const coutDate = getCheckoutDate();
+  // チェックアウト最小日をチェックイン日に合わせる
+  if (cinDate) {
+    const coEl = document.getElementById('checkout_date');
+    if (coEl) coEl.min = cinDate;
+  }
+  // チェックアウトがチェックインより前なら自動クリア
   if (cinDate && coutDate && coutDate < cinDate) {
-    document.getElementById('checkout_year').value  = '';
-    document.getElementById('checkout_month').value = '';
-    document.getElementById('checkout_day').value   = '';
-    document.getElementById('checkout_time').value  = '';
+    const coEl = document.getElementById('checkout_date');
+    const coTime = document.getElementById('checkout_time');
+    if (coEl) coEl.value = '';
+    if (coTime) coTime.value = '';
   }
   updateWalkVisibility();
 }
