@@ -339,7 +339,7 @@
     <span class="paw">🐾</span>
     <div>
       <h1>ワンルーク江東区亀戸店</h1>
-      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0527</span></p>
+      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0528</span></p>
     </div>
   </div>
 </header>
@@ -649,6 +649,24 @@
           </div>
         </div>
 
+        <div class="field section-hidden" id="field-checkin">
+          <label class="field-label">チェックイン日時 <span class="required">必須</span></label>
+          <div class="datetime-row">
+            <input type="date" id="checkin_date" onchange="onCheckinDateChange()">
+            <input type="time" id="checkin_time" onchange="updateWalkVisibility()">
+          </div>
+          <p class="field-error-msg" id="err-checkin"></p>
+        </div>
+
+        <div class="field section-hidden" id="field-checkout">
+          <label class="field-label">チェックアウト日時 <span class="required">必須</span></label>
+          <div class="datetime-row">
+            <input type="date" id="checkout_date" onchange="updateWalkVisibility()">
+            <input type="time" id="checkout_time" onchange="updateWalkVisibility()">
+          </div>
+          <p class="field-error-msg" id="err-checkout"></p>
+        </div>
+
         <div class="field section-hidden" id="field-weight">
           <label class="field-label" id="label-weight">1頭目の体重（kg） <span class="required">必須</span></label>
           <input type="number" id="weight" min="0.1" max="60" step="0.1" placeholder="例：5.5" oninput="onWeightChange()">
@@ -759,24 +777,6 @@
             <div class="info-box" id="walk-days-hint-2" style="margin-top:6px;"></div>
             <p class="field-error-msg" id="err-walk-days-2"></p>
           </div>
-        </div>
-
-        <div class="field section-hidden" id="field-checkin">
-          <label class="field-label">チェックイン日時 <span class="required">必須</span></label>
-          <div class="datetime-row">
-            <input type="date" id="checkin_date" onchange="onCheckinDateChange()">
-            <input type="time" id="checkin_time" onchange="updateWalkVisibility()">
-          </div>
-          <p class="field-error-msg" id="err-checkin"></p>
-        </div>
-
-        <div class="field section-hidden" id="field-checkout">
-          <label class="field-label">チェックアウト日時 <span class="required">必須</span></label>
-          <div class="datetime-row">
-            <input type="date" id="checkout_date" onchange="updateWalkVisibility()">
-            <input type="time" id="checkout_time" onchange="updateWalkVisibility()">
-          </div>
-          <p class="field-error-msg" id="err-checkout"></p>
         </div>
 
       </div>
@@ -989,8 +989,10 @@ function updateHotelFlow() {
     room2Label.innerHTML = `2頭目の部屋タイプ${w2tag} <span class="required">必須</span>`;
   }
   toggle('field-room-type2', roomReady && isMulti && shared === 'false');
-  toggle('field-checkin', roomReady);
-  toggle('field-checkout', roomReady);
+  // チェックイン・チェックアウト：犬猫＋頭数が決まれば即表示（部屋タイプ選択前でも）
+  const dateReady = !!petType && !!count && !is3plus;
+  toggle('field-checkin', dateReady);
+  toggle('field-checkout', dateReady);
 
   // 2頭目トリミング希望選択の表示制御
   const show2ndTrimmingToggle = currentCategory === 'combined' && isMulti && !is3plus && !isCat;
