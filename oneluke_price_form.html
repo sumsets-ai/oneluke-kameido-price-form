@@ -913,6 +913,9 @@
         <strong style="color:var(--brand-dark)">📞 050-8893-0169</strong><br>
         <span style="font-size:0.75rem">8:30〜20:30（年中無休）</span>
       </div>
+      <div style="margin-top:24px;">
+        <button class="btn-secondary" onclick="restartForm()">🔄 条件を変えてもう一度試す</button>
+      </div>
     </div>
   </div>
 
@@ -1850,6 +1853,18 @@ async function submitForm() {
   } finally {
     document.getElementById('loading').classList.remove('show');
   }
+}
+
+function restartForm() {
+  // UIDを保持しつつページをリロード（イントロはスキップ）
+  const url = new URL(location.href);
+  url.searchParams.set('skip_intro', '1');
+  location.href = url.toString();
+}
+
+// 「もう一度試す」から戻った場合はイントロをスキップしてカテゴリ選択へ
+if (urlParams.get('skip_intro') === '1') {
+  goFromIntro();
 }
 </script>
 </body>
