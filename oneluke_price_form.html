@@ -1384,7 +1384,7 @@ function validate() {
 
   // 2頭目トリミング希望の未選択チェック
   const wantTrim2Field = document.getElementById('field-want-trim-2');
-  const wantTrim2FieldVisible = wantTrim2Field && wantTrim2Field.style.display !== 'none';
+  const wantTrim2FieldVisible = wantTrim2Field && wantTrim2Field.style.display !== 'none' && !wantTrim2Field.classList.contains('section-hidden');
   const wantTrim2Val = document.querySelector('input[name="want_trim_2"]:checked')?.value;
   if (wantTrim2FieldVisible && !wantTrim2Val) {
     const errEl = document.getElementById('err-want-trim-2');
