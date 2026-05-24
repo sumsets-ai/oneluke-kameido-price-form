@@ -331,7 +331,7 @@
     <span class="paw">🐾</span>
     <div>
       <h1>ワンルーク江東区亀戸店</h1>
-      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0530</span></p>
+      <p>概算料金のご案内フォーム <span style="font-size:0.65rem;color:#aaa;">v0531</span></p>
     </div>
   </div>
 </header>
@@ -357,15 +357,29 @@
       <div style="font-size:0.8rem; color:var(--text-light); margin-bottom:18px;">
         LINEアプリ内では日時の入力ができません
       </div>
-      <div style="background:#fff5f5; border:2px solid #f5bcbc; border-radius:12px; padding:18px 16px; text-align:left; margin-bottom:22px; line-height:2.2;">
-        <div style="font-size:0.78rem; color:var(--text-light); margin-bottom:8px;">以下の手順で外部ブラウザから開いてください👇</div>
+
+      <!-- Android用 -->
+      <div id="intro-android" style="display:none; background:#fff5f5; border:2px solid #f5bcbc; border-radius:12px; padding:18px 16px; text-align:left; margin-bottom:22px; line-height:2.2;">
+        <div style="font-size:0.78rem; color:var(--text-light); margin-bottom:8px;">🤖 Android の方はこちらの手順で👇</div>
         <div style="font-size:0.93rem; color:var(--text);">
           <span style="color:#d63214; font-weight:700;">①</span> LINEのURLをタップして開く<br>
           <span style="color:#d63214; font-weight:700;">②</span> 右下の「<strong>・・・</strong>」をタップ<br>
-          <span style="color:#d63214; font-weight:700;">③</span>「<strong>外部ブラウザで開く</strong>」を選択<br>
-          <span style="color:#d63214; font-weight:700;">④</span> Chrome / Safari で入力する
+          <span style="color:#d63214; font-weight:700;">③</span>「<strong>他のアプリで開く</strong>」を選択<br>
+          <span style="color:#d63214; font-weight:700;">④</span> <strong>Chrome</strong> で入力する
         </div>
       </div>
+
+      <!-- iOS用 -->
+      <div id="intro-ios" style="display:none; background:#fff5f5; border:2px solid #f5bcbc; border-radius:12px; padding:18px 16px; text-align:left; margin-bottom:22px; line-height:2.2;">
+        <div style="font-size:0.78rem; color:var(--text-light); margin-bottom:8px;">🍎 iPhone の方はこちらの手順で👇</div>
+        <div style="font-size:0.93rem; color:var(--text);">
+          <span style="color:#d63214; font-weight:700;">①</span> LINEのURLをタップして開く<br>
+          <span style="color:#d63214; font-weight:700;">②</span> 右下の「<strong>・・・</strong>」をタップ<br>
+          <span style="color:#d63214; font-weight:700;">③</span>「<strong>ブラウザで開く</strong>」を選択<br>
+          <span style="color:#d63214; font-weight:700;">④</span> <strong>Safari</strong> で入力する
+        </div>
+      </div>
+
       <button class="btn-primary" onclick="goFromIntro()">
         確認できたら次へ　→
       </button>
@@ -915,6 +929,24 @@ function goToDetail() {
   setStep(2);
   window.scrollTo(0, 0);
 }
+
+// OS判定 → 案内文を出し分け（PCはそのまま次へ）
+(function() {
+  const ua = navigator.userAgent;
+  if (/Android/i.test(ua)) {
+    document.getElementById('intro-android').style.display = '';
+  } else if (/iPhone|iPad|iPod/i.test(ua)) {
+    document.getElementById('intro-ios').style.display = '';
+  } else {
+    // PC・その他 → intro画面をスキップして直接フォームへ
+    const intro = document.getElementById('screen-intro');
+    const pw    = document.getElementById('progress-wrap');
+    const cat   = document.getElementById('screen-category');
+    if (intro) intro.style.display = 'none';
+    if (pw)    pw.style.display    = '';
+    if (cat)   cat.classList.remove('section-hidden');
+  }
+})();
 
 function goFromIntro() {
   hide('screen-intro');
