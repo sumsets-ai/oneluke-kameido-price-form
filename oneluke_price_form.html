@@ -1852,12 +1852,12 @@ async function submitForm() {
   const data = collectData();
   document.getElementById('loading').classList.add('show');
   try {
-    await fetch(WEBHOOK_URL, {
+    const res = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-      mode: 'no-cors'
+      body: JSON.stringify(data)
     });
+    if (!res.ok) throw new Error('HTTP ' + res.status);
     hide('screen-confirm');
     show('screen-done');
     setStep(4);
