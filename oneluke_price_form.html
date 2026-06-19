@@ -1855,7 +1855,7 @@ async function submitForm() {
     const res = await fetch(WEBHOOK_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data)
+      body: JSON.stringify({ value: JSON.stringify(data), ...data })
     });
     if (!res.ok) throw new Error('HTTP ' + res.status);
     hide('screen-confirm');
