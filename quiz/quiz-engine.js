@@ -127,11 +127,13 @@ function getWeekProgress() {
 // クイズ一覧ページ・クイズページの両方から呼べる共通関数。
 function renderStatusBar(container) {
   if (!container) return;
+  // position:stickyな要素は「親要素の高さの範囲内」でしか固定されない。
+  // 専用の入れ物divで包むと、その入れ物自体の高さが低いためすぐ画面外に流れてしまうので、
+  // 渡されたcontainer自体にクラスを付けて、大きい親（#app）の直接の子として固定させる。
+  container.className = 'status-bar';
   container.innerHTML = `
-    <div class="status-bar">
-      <div class="status-chip">🔥<span>${getStreak()}</span>日</div>
-      <div class="status-chip">⭐<span>${getXP()}</span>pt</div>
-    </div>
+    <div class="status-chip">🔥<span>${getStreak()}</span>日</div>
+    <div class="status-chip">⭐<span>${getXP()}</span>pt</div>
   `;
 }
 
@@ -252,7 +254,7 @@ function initQuiz(config) {
       <div id="reviewDone" class="review-done" style="display:none;">
         <p>おつかれさまでした！🐾<br>動画をもう一度見て、次は満点を狙いましょう。</p>
       </div>
-      <div class="retry-link"><a href="javascript:location.reload()">結果画面にもどる</a></div>
+      <div class="retry-link"><a href="#" id="backToResultLink">結果画面にもどる</a></div>
     </div>
   `;
 
@@ -497,6 +499,14 @@ function initQuiz(config) {
     resultScreen.style.display = 'none';
     reviewScreen.style.display = 'block';
     window.scrollTo(0, 0);
+
+    // 「結果画面にもどる」：ページを再読み込みせず、既に描画済みの結果画面をそのまま出し直す
+    document.getElementById('backToResultLink').onclick = (e) => {
+      e.preventDefault();
+      reviewScreen.style.display = 'none';
+      resultScreen.style.display = 'block';
+      window.scrollTo(0, 0);
+    };
   }
 }
 
@@ -536,6 +546,9 @@ function sendResult(config, questions, selected, userName, userStore, score) {
     回答詳細: detailText
   };
 
+  // 送信を試みる前に、まず再送キューへ保存しておく。
+  // （送信中・リトライ待機中にページを閉じても、キューに残っていれば次回開いた時に再送できる）
+  queuePending(payload);
   postToWebhook(payload);
 }
 
@@ -544,9 +557,9 @@ function sendResult(config, questions, selected, userName, userStore, score) {
 // 次に別のクイズページを開いたタイミングで自動的に再送を試みる。
 const PENDING_KEY = 'quizPendingSubmissions';
 
-// 送信失敗時、その場で3回まで自動リトライ（1.5秒→3秒間隔）してから再送キューへ回す。
-// キューからは「送信成功が確定した時」にしか消さない。
-// （先にキューを空にしてから送るやり方だと、再試行中にページを閉じた場合にデータが消えてしまうため）
+// 送信失敗時、その場で3回まで自動リトライ（1.5秒→3秒間隔）する。
+// payloadは呼び出し元（sendResult/flushPendingSubmissions）で送信前に既にキューへ保存済みなので、
+// ここでは「成功したらキューから消す」だけでよい（送信中・リトライ待機中にページを閉じても記録は残る）。
 function postToWebhook(payload, attempt) {
   attempt = attempt || 1;
   fetch(QUIZ_WEBHOOK_URL, {
@@ -564,8 +577,7 @@ function postToWebhook(payload, attempt) {
       console.warn(`[研修クイズ] 送信失敗（${attempt}回目）。再試行します:`, err.message);
       setTimeout(() => postToWebhook(payload, attempt + 1), attempt * 1500);
     } else {
-      console.error('[研修クイズ] 送信失敗（3回試行）。再送キューに保存します:', err.message, payload);
-      queuePending(payload);
+      console.error('[研修クイズ] 送信失敗（3回試行）。再送キューに残したままにします:', err.message, payload);
     }
   });
 }
