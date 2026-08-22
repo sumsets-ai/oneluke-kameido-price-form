@@ -37,14 +37,15 @@ const PAW_SVG = `
 
 // ============================================================
 // 学習継続の仕組み（連続記録・ポイント・週間ログ）
-// すべてこの端末のlocalStorageに保存する（他の端末とは共有されない）。
+// この端末のlocalStorageに、登録済みの氏名ごとに分けて保存する。
+// （「別の人はこちら」で切り替えた際に、前の人の実績を引き継がないようにするため）
 // ============================================================
-const STATS_KEYS = {
-  xp: 'quizXP',
-  streak: 'quizStreakCount',
-  lastActive: 'quizLastActiveDate',
-  activityDates: 'quizActivityDates'
-};
+function currentStatsOwner() {
+  try { return localStorage.getItem(PROFILE_KEYS.name) || 'guest'; } catch (e) { return 'guest'; }
+}
+function statsKey(base) {
+  return base + ':' + currentStatsOwner();
+}
 
 function todayStr() {
   const d = new Date();
@@ -58,17 +59,17 @@ function daysBetween(a, b) {
 }
 
 function getXP() {
-  try { return parseInt(localStorage.getItem(STATS_KEYS.xp) || '0', 10) || 0; } catch (e) { return 0; }
+  try { return parseInt(localStorage.getItem(statsKey('quizXP')) || '0', 10) || 0; } catch (e) { return 0; }
 }
 function addXP(amount) {
-  try { localStorage.setItem(STATS_KEYS.xp, String(getXP() + amount)); } catch (e) {}
+  try { localStorage.setItem(statsKey('quizXP'), String(getXP() + amount)); } catch (e) {}
 }
 function getStreak() {
-  try { return parseInt(localStorage.getItem(STATS_KEYS.streak) || '0', 10) || 0; } catch (e) { return 0; }
+  try { return parseInt(localStorage.getItem(statsKey('quizStreakCount')) || '0', 10) || 0; } catch (e) { return 0; }
 }
 function getActivityDates() {
   try {
-    const parsed = JSON.parse(localStorage.getItem(STATS_KEYS.activityDates) || '[]');
+    const parsed = JSON.parse(localStorage.getItem(statsKey('quizActivityDates')) || '[]');
     return Array.isArray(parsed) ? parsed : [];
   } catch (e) {
     return [];
@@ -80,7 +81,7 @@ function getActivityDates() {
 function recordCompletion(score, total) {
   const today = todayStr();
   let last = null;
-  try { last = localStorage.getItem(STATS_KEYS.lastActive); } catch (e) {}
+  try { last = localStorage.getItem(statsKey('quizLastActiveDate')); } catch (e) {}
 
   let streak = getStreak();
   if (last === today) {
@@ -92,12 +93,12 @@ function recordCompletion(score, total) {
   }
 
   try {
-    localStorage.setItem(STATS_KEYS.streak, String(streak));
-    localStorage.setItem(STATS_KEYS.lastActive, today);
+    localStorage.setItem(statsKey('quizStreakCount'), String(streak));
+    localStorage.setItem(statsKey('quizLastActiveDate'), today);
     const dates = getActivityDates();
     if (!dates.includes(today)) {
       dates.push(today);
-      localStorage.setItem(STATS_KEYS.activityDates, JSON.stringify(dates));
+      localStorage.setItem(statsKey('quizActivityDates'), JSON.stringify(dates));
     }
   } catch (e) {}
 
@@ -510,13 +511,22 @@ function initQuiz(config) {
   }
 }
 
-// --- 一覧ページの「Clear」スタンプ用（この端末のブラウザに記録） ---
+// --- 一覧ページの「Clear」スタンプ用（この端末のブラウザに、登録済みの氏名ごとに記録） ---
 // quiz_id はファイル名（拡張子なし）を使う。クイズ一覧.html側のファイル名と必ず一致させること。
+// isCleared()はクイズ一覧.html / deploy/index.html からも呼ばれる共通関数。
 function markCleared(quizId) {
   try {
-    localStorage.setItem('quizCleared:' + quizId, '1');
+    localStorage.setItem(statsKey('quizCleared:' + quizId), '1');
   } catch (e) {
     // localStorageが使えない環境では何もしない（挑戦自体は問題なく完了する）
+  }
+}
+
+function isCleared(quizId) {
+  try {
+    return localStorage.getItem(statsKey('quizCleared:' + quizId)) === '1';
+  } catch (e) {
+    return false;
   }
 }
 
