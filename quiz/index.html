@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>研修クイズ一覧｜ワンルーク亀戸店</title>
+<link rel="stylesheet" href="quiz-style.css">
+</head>
+<body>
+
+<h1>研修クイズ一覧</h1>
+<div class="sub">このページをブックマークしてください。新しいクイズが増えたらここに追加されます。</div>
+
+<ul class="quiz-list" id="quizList"></ul>
+
+<script>
+// ============================================================
+// クイズが増えたら、ここに1行足すだけでOK（新しいHTMLファイルとセットで追加）
+// ============================================================
+// 1行1クイズ。増やすときはこの形式のまま下に追加すればOK（末尾のカンマも忘れずに）。
+const QUIZZES = [
+  { title: "抱っこの仕方", category: "犬の扱い方", file: "dakko-no-shikata.html" },
+  // { title: "シャンプーの仕方", category: "犬の扱い方", file: "shampoo-no-shikata.html" },
+];
+
+const listEl = document.getElementById('quizList');
+QUIZZES.forEach(quiz => {
+  const li = document.createElement('li');
+  const a = document.createElement('a');
+  a.className = 'quiz-card';
+  a.href = quiz.file;
+  a.innerHTML = `
+    <div class="quiz-card-tag">${escapeHtml(quiz.category)}</div>
+    <div class="quiz-card-title">${escapeHtml(quiz.title)}</div>
+    <div class="quiz-card-meta">クリックしてクイズに挑戦（何度でも再挑戦できます）</div>
+  `;
+  li.appendChild(a);
+  listEl.appendChild(li);
+});
+
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.textContent = str == null ? '' : str;
+  return div.innerHTML;
+}
+</script>
+
+</body>
+</html>
