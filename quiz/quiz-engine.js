@@ -260,6 +260,15 @@ function sendResult(config, questions, selected, userName, score) {
     回答詳細: detailText
   };
 
+  postToWebhook(payload);
+}
+
+// --- 送信の実行＋失敗時の再送キュー ---
+// 一時的な通信障害で受講記録が消えないよう、失敗した回答はlocalStorageに残し、
+// 次に別のクイズページを開いたタイミングで自動的に再送を試みる。
+const PENDING_KEY = 'quizPendingSubmissions';
+
+function postToWebhook(payload) {
   fetch(QUIZ_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -270,9 +279,34 @@ function sendResult(config, questions, selected, userName, score) {
     if (!res.ok) throw new Error('status ' + res.status);
     console.log('[研修クイズ] 送信OK', payload);
   }).catch(err => {
-    console.error('[研修クイズ] 送信失敗:', err.message, payload);
+    console.error('[研修クイズ] 送信失敗。再送キューに保存します:', err.message, payload);
+    queuePending(payload);
   });
 }
+
+function queuePending(payload) {
+  try {
+    const list = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    list.push(payload);
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+  } catch (e) {
+    // localStorageが使えない環境では再送キューも諦める（それ以上は打つ手がない）
+  }
+}
+
+// ページ読み込み時に、前回以前に送信できなかった分があれば自動で再送を試みる
+function flushPendingSubmissions() {
+  let list;
+  try {
+    list = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+  } catch (e) {
+    return;
+  }
+  if (!list.length) return;
+  try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
+  list.forEach(payload => postToWebhook(payload));
+}
+flushPendingSubmissions();
 
 function escapeHtml(str) {
   const div = document.createElement('div');
