@@ -220,15 +220,16 @@ function initQuiz(config) {
     resultScreen.style.display = 'block';
     window.scrollTo(0, 0);
 
-    markCleared(config.video_title);
+    markCleared(config.quiz_id || config.video_title);
     sendResult(config, questions, selected, userName, score);
   };
 }
 
 // --- 一覧ページの「Clear」スタンプ用（この端末のブラウザに記録） ---
-function markCleared(videoTitle) {
+// quiz_id はファイル名（拡張子なし）を使う。クイズ一覧.html側のファイル名と必ず一致させること。
+function markCleared(quizId) {
   try {
-    localStorage.setItem('quizCleared:' + videoTitle, '1');
+    localStorage.setItem('quizCleared:' + quizId, '1');
   } catch (e) {
     // localStorageが使えない環境では何もしない（挑戦自体は問題なく完了する）
   }
