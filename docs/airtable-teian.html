@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>顧客管理基盤 導入提案｜ワンルーク亀戸店</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Shippori+Mincho:wght@400;500;600;700;800&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap">
+<style>
+:root{
+  --ink:#16262c; --ink-soft:#3c5860; --muted:#7c9199;
+  --paper:#f8fbfa; --card:#ffffff; --line:#dfeceb;
+  --tiffany:#0abab5; --tiffany-deep:#078984; --tiffany-tint:#e2f7f6;
+  --orange:#e8722c; --orange-deep:#c25a1c; --orange-tint:#fdead9;
+  --green:#2f9e6e; --green-tint:#e3f6ee;
+  --red:#d1495b; --red-tint:#fbe7ea;
+  --shadow:190 25% 20%;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --ink:#eaf3f2; --ink-soft:#b9cdd0; --muted:#84a0a4;
+    --paper:#0f1b1f; --card:#152428; --line:#25393d;
+    --tiffany:#22d6cf; --tiffany-deep:#5eeae4; --tiffany-tint:#12302f;
+    --orange:#ff9a52; --orange-deep:#ffb37a; --orange-tint:#3a2414;
+    --green:#4bcf95; --green-tint:#123226;
+    --red:#ff7f8e; --red-tint:#3a1720;
+  }
+}
+:root[data-theme="dark"]{
+  --ink:#eaf3f2; --ink-soft:#b9cdd0; --muted:#84a0a4;
+  --paper:#0f1b1f; --card:#152428; --line:#25393d;
+  --tiffany:#22d6cf; --tiffany-deep:#5eeae4; --tiffany-tint:#12302f;
+  --orange:#ff9a52; --orange-deep:#ffb37a; --orange-tint:#3a2414;
+  --green:#4bcf95; --green-tint:#123226;
+  --red:#ff7f8e; --red-tint:#3a1720;
+}
+
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Zen Kaku Gothic New","Hiragino Kaku Gothic ProN","Yu Gothic",sans-serif;
+  line-height:1.75; -webkit-font-smoothing:antialiased;
+}
+.page{ max-width:820px; margin:0 auto; padding:56px 24px 96px; }
+
+h1,h2,h3{ font-family:"Shippori Mincho","Hiragino Mincho ProN","Yu Mincho",serif; text-wrap:balance; margin:0; }
+
+.eyebrow{
+  font-size:12px; font-weight:700; letter-spacing:.14em; color:var(--tiffany-deep);
+  text-transform:uppercase; margin:0 0 10px;
+}
+.eyebrow.section{ margin-bottom:8px; }
+
+/* ヘッダー */
+header{ border-bottom:1px solid var(--line); padding-bottom:28px; margin-bottom:40px; }
+header h1{ font-size:34px; font-weight:800; color:var(--ink); margin-bottom:14px; }
+header .lede{ font-size:16px; color:var(--ink-soft); max-width:62ch; margin-bottom:20px; }
+.meta-row{
+  display:flex; flex-wrap:wrap; gap:10px 28px; font-size:13px; color:var(--muted);
+}
+.meta-row b{ color:var(--ink-soft); font-weight:700; }
+
+section{ margin-bottom:52px; }
+.section-head{ margin-bottom:20px; }
+.section-head h2{ font-size:23px; font-weight:700; color:var(--ink); }
+
+/* 課題カード */
+.pain-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:14px;
+}
+.pain-card{
+  background:var(--card); border:1px solid var(--line); border-radius:14px; padding:18px 18px 16px;
+  box-shadow:0 6px 18px -14px hsl(var(--shadow) / .4);
+}
+.pain-card .num{ font-family:"Shippori Mincho",serif; font-size:13px; color:var(--tiffany-deep); font-weight:700; margin-bottom:6px; }
+.pain-card p{ margin:0; font-size:14px; color:var(--ink-soft); }
+.pain-card strong{ display:block; font-size:15px; color:var(--ink); margin-bottom:4px; }
+
+/* 比較表 */
+.table-wrap{ overflow-x:auto; border:1px solid var(--line); border-radius:14px; background:var(--card); }
+table{ width:100%; border-collapse:collapse; font-size:13.5px; min-width:640px; }
+thead th{
+  text-align:left; background:var(--tiffany-tint); color:var(--tiffany-deep);
+  font-weight:700; padding:12px 16px; white-space:nowrap; border-bottom:1px solid var(--line);
+}
+thead th:first-child{ border-top-left-radius:14px; }
+thead th:last-child{ border-top-right-radius:14px; }
+tbody td{ padding:13px 16px; border-bottom:1px solid var(--line); color:var(--ink-soft); vertical-align:top; }
+tbody tr:last-child td{ border-bottom:none; }
+tbody td:first-child{ color:var(--ink); font-weight:700; white-space:nowrap; width:110px; }
+tbody td b{ color:var(--ink); }
+.win{ color:var(--tiffany-deep); font-weight:700; }
+
+/* アーキテクチャ図 */
+.flow{
+  background:var(--card); border:1px solid var(--line); border-radius:16px; padding:28px 24px;
+}
+.flow-core{
+  display:flex; align-items:center; justify-content:center; gap:10px; flex-wrap:wrap;
+  font-family:"Shippori Mincho",serif; font-weight:700; font-size:15px; color:var(--ink);
+  margin-bottom:22px;
+}
+.flow-core .chip{
+  background:var(--tiffany); color:#fff; padding:8px 16px; border-radius:999px; font-size:14px;
+}
+.flow-core .plus{ color:var(--muted); font-size:14px; }
+.flow-arrow{ text-align:center; color:var(--muted); font-size:20px; margin:4px 0 18px; }
+.flow-outputs{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px;
+}
+.flow-outputs .out{
+  border:1px solid var(--line); border-radius:12px; padding:14px; text-align:center;
+  background:var(--paper);
+}
+.flow-outputs .out .ico{ font-size:20px; margin-bottom:6px; }
+.flow-outputs .out b{ display:block; font-size:13.5px; color:var(--ink); margin-bottom:3px; }
+.flow-outputs .out span{ font-size:12px; color:var(--muted); }
+
+/* 料金カード */
+.price-grid{
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(210px,1fr)); gap:14px;
+}
+.price-card{
+  border:1px solid var(--line); border-radius:16px; padding:20px; background:var(--card); position:relative;
+}
+.price-card.reco{ border-color:var(--tiffany); box-shadow:0 10px 26px -18px hsl(var(--shadow) / .5); }
+.price-card .badge{
+  position:absolute; top:-11px; right:16px; background:var(--tiffany); color:#fff;
+  font-size:11px; font-weight:700; padding:4px 10px; border-radius:999px; letter-spacing:.04em;
+}
+.price-card h3{ font-family:"Zen Kaku Gothic New",sans-serif; font-size:14px; font-weight:700; color:var(--muted); margin-bottom:8px; }
+.price-card .amount{ font-size:26px; font-weight:900; color:var(--ink); font-variant-numeric:tabular-nums; }
+.price-card .amount small{ font-size:13px; font-weight:500; color:var(--muted); }
+.price-card ul{ margin:14px 0 0; padding-left:18px; font-size:12.5px; color:var(--ink-soft); }
+.price-card li{ margin-bottom:5px; }
+
+.note{
+  font-size:12px; color:var(--muted); margin-top:14px; padding-left:2px;
+}
+
+/* 結論ボックス */
+.verdict{
+  background:var(--tiffany-tint); border:1px solid var(--tiffany); border-radius:16px; padding:24px 26px;
+}
+.verdict h2{ font-size:19px; color:var(--tiffany-deep); margin-bottom:14px; }
+.verdict ul{ margin:0; padding-left:20px; }
+.verdict li{ margin-bottom:9px; font-size:14.5px; color:var(--ink); }
+
+/* 展望 */
+.vision{
+  border-left:3px solid var(--orange); padding:4px 0 4px 20px;
+}
+.vision p{ font-size:14.5px; color:var(--ink-soft); margin:0 0 10px; }
+.vision p:last-child{ margin-bottom:0; }
+
+/* CTA */
+.cta{
+  background:var(--orange-tint); border:1px solid var(--orange); border-radius:16px; padding:26px 28px;
+  display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px;
+}
+.cta .txt{ max-width:60ch; }
+.cta .eyebrow{ color:var(--orange-deep); }
+.cta h2{ color:var(--ink); font-size:19px; margin-bottom:8px; }
+.cta p{ font-size:13.5px; color:var(--ink-soft); margin:0; }
+.cta .price{
+  font-family:"Shippori Mincho",serif; font-weight:800; font-size:22px; color:var(--orange-deep);
+  white-space:nowrap; text-align:right;
+}
+.cta .price small{ display:block; font-family:"Zen Kaku Gothic New",sans-serif; font-weight:500; font-size:11.5px; color:var(--muted); margin-top:2px; }
+
+footer{ text-align:center; font-size:12px; color:var(--muted); margin-top:56px; }
+</style>
+</head>
+<body>
+
+<div class="page">
+
+  <header>
+    <div class="eyebrow">社内提案書 ／ ワンルーク亀戸店</div>
+    <h1>顧客管理基盤、Airtableに一本化しませんか</h1>
+    <p class="lede">CRM・在庫・LINE配信をひとつの基盤に。今の構成をほぼそのまま活かして、月額¥6,000前後から始められます。</p>
+    <div class="meta-row">
+      <span><b>作成</b>：Takeshi</span>
+      <span><b>宛先</b>：代表</span>
+      <span><b>作成日</b>：2026-08-22</span>
+      <span><b>対象</b>：ワンルーク亀戸店 顧客管理・在庫管理</span>
+    </div>
+  </header>
+
+  <section>
+    <div class="section-head">
+      <div class="eyebrow section">01 — 現状の課題</div>
+      <h2>今のままだと、どこかで頭打ちになる</h2>
+    </div>
+    <div class="pain-grid">
+      <div class="pain-card">
+        <div class="num">課題 1</div>
+        <strong>Airtableが無料枠のまま</strong>
+        <p>1ベースあたり1,000レコードが上限。顧客データを本格的に蓄積すると近いうちに超える規模。</p>
+      </div>
+      <div class="pain-card">
+        <div class="num">課題 2</div>
+        <strong>在庫が属人化</strong>
+        <p>消耗品の残数把握が感覚頼み。発注忘れ・過剰発注どちらのリスクもある。</p>
+      </div>
+      <div class="pain-card">
+        <div class="num">課題 3</div>
+        <strong>LINE配信ツールが未選定</strong>
+        <p>タグ付け配信・ステップ配信をやるなら、Lステップ導入も選択肢に挙がっていた（月額¥21,780〜）。</p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="eyebrow section">02 — 比較</div>
+      <h2>Airtable と Lステップ、何が違うのか</h2>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr><th>観点</th><th>Airtable</th><th>Lステップ</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>できること</td>
+            <td>顧客管理・在庫管理・案件管理など<b>何にでも使える汎用データベース</b></td>
+            <td>LINE公式アカウント特化の配信・タグ付け・簡易顧客カルテ</td>
+          </tr>
+          <tr>
+            <td>汎用性</td>
+            <td class="win">高い。業種を問わず流用できる</td>
+            <td>LINE運用前提。それ以外の業務には使えない</td>
+          </tr>
+          <tr>
+            <td>他店舗・他業種展開</td>
+            <td class="win">テーブル設計を複製するだけ。Gioのコンサル先にもそのまま提案可</td>
+            <td>LINE公式アカウントがある事業限定</td>
+          </tr>
+          <tr>
+            <td>タグ配信・ステップ配信</td>
+            <td class="win">Make経由で再現可能（要構築、一度組めば運用は同じ）</td>
+            <td>専用UIで完結。ノーコードで組める手軽さは強み</td>
+          </tr>
+          <tr>
+            <td>在庫管理・PSI</td>
+            <td class="win">対応。しきい値検知→自動通知の座組が組める</td>
+            <td>非対応</td>
+          </tr>
+          <tr>
+            <td>AIとの連携</td>
+            <td class="win">API公開。Make経由でClaude等と自由に接続できる</td>
+            <td>自社サービス内で概ね完結</td>
+          </tr>
+          <tr>
+            <td>月額目安</td>
+            <td class="win">Team ¥3,000〜／人（年払い）</td>
+            <td>スタンダード ¥21,780〜</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p class="note">※価格は2026年8月時点の公開情報に基づく目安。契約前に最新の公式価格をご確認ください。</p>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="eyebrow section">03 — 提案アーキテクチャ</div>
+      <h2>今ある構成の、そのまま延長でできる</h2>
+    </div>
+    <div class="flow">
+      <div class="flow-core">
+        <span class="chip">Airtable</span><span class="plus">×</span>
+        <span class="chip">Make</span><span class="plus">×</span>
+        <span class="chip">LINE公式アカウント</span>
+      </div>
+      <div class="flow-arrow">↓ すでに稼働中の構成（概算料金BOT・研修クイズBOT）を土台に</div>
+      <div class="flow-outputs">
+        <div class="out"><div class="ico">🗂️</div><b>顧客CRM</b><span>来店・施術履歴の一元管理</span></div>
+        <div class="out"><div class="ico">📦</div><b>在庫PSI</b><span>隔週チェック→在庫薄を自動通知</span></div>
+        <div class="out"><div class="ico">🏷️</div><b>タグ配信</b><span>属性ごとにLINE一斉配信</span></div>
+        <div class="out"><div class="ico">📅</div><b>ステップ配信</b><span>友だち追加日起点の自動シナリオ</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="section-head">
+      <div class="eyebrow section">04 — 料金プラン</div>
+      <h2>おすすめは Team プラン</h2>
+    </div>
+    <div class="price-grid">
+      <div class="price-card">
+        <h3>Free（現状）</h3>
+        <div class="amount">¥0</div>
+        <ul>
+          <li>1ベース1,000レコードまで</li>
+          <li>近いうちに上限到達の見込み</li>
+        </ul>
+      </div>
+      <div class="price-card reco">
+        <div class="badge">推奨</div>
+        <h3>Team</h3>
+        <div class="amount">¥3,000<small>〜／人・月（年払い）</small></div>
+        <ul>
+          <li>1ベース50,000レコード・添付20GB</li>
+          <li>自動化 月25,000回まで</li>
+          <li>編集者2〜3名想定で月¥6,000〜9,000目安</li>
+          <li>閲覧のみの利用者は追加課金なし</li>
+        </ul>
+      </div>
+      <div class="price-card">
+        <h3>Business</h3>
+        <div class="amount">¥6,750<small>〜／人・月（年払い）</small></div>
+        <ul>
+          <li>125,000レコード・SSO対応</li>
+          <li>複数店舗展開まで見据える段階で検討</li>
+        </ul>
+      </div>
+    </div>
+    <p class="note">※Airtableは「実際にログインして編集する人数」に対して課金される想定。LINE経由の自動書き込みは対象外のため、実際の座席数は少なく済む見込み。</p>
+  </section>
+
+  <div class="verdict">
+    <h2>Airtable一択でいい理由</h2>
+    <ul>
+      <li><b>CRM・在庫PSI・タグ配信・ステップ配信、すべてを1つの基盤でカバーできる。</b>Lステップを別契約する必要がない</li>
+      <li>今すでに動いている「Airtable×Make×LINE」の構成をそのまま延長するだけ。ゼロから作り直す必要がない</li>
+      <li>月額¥6,000〜9,000は、Lステップのスタンダードプラン（¥21,780〜）より大幅に安い</li>
+      <li>業種を問わない汎用DBなので、Gioのコンサル先への横展開にもそのまま再利用できる</li>
+    </ul>
+  </div>
+
+  <section style="margin-top:52px;">
+    <div class="section-head">
+      <div class="eyebrow section">05 — この先の展望</div>
+      <h2>人の手を挟むのは、最初の設計だけにする</h2>
+    </div>
+    <div class="vision">
+      <p>今回の研修クイズBOTや概算料金BOTと同じように、Airtable×Make×LINEの座組は一度組んでしまえば、日々の運用はAI（Claude Code）側で監視・調整できる範囲が広い。</p>
+      <p>在庫のしきい値調整、配信タイミングの見直し、新しいタグ条件の追加なども、都度Takeshiさんが手を動かすのではなく、「こうしたい」と伝えるだけでAIが座組を書き換える運用に寄せていける。人の手が要るのは、最初の要件定義と、最終承認のところだけ。</p>
+    </div>
+  </section>
+
+  <div class="cta">
+    <div class="txt">
+      <div class="eyebrow">承認のお願い</div>
+      <h2>Airtable Team プランへのアップグレード</h2>
+      <p>編集者2〜3アカウント・年払いでの契約を想定しています。</p>
+    </div>
+    <div class="price">月額 ¥6,000〜9,000 目安<small>¥3,000／人 × 2〜3人</small></div>
+  </div>
+
+  <footer>ワンルーク亀戸店 ／ Gio 内部提案資料</footer>
+
+</div>
+</body>
+</html>
