@@ -8,6 +8,8 @@
 </head>
 <body>
 
+<div id="statusBarMount"></div>
+
 <div class="brand-row">
   <div class="paw-mark">
     <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="肉球マスコット">
@@ -39,6 +41,8 @@
   <p><strong>このページをブックマーク！</strong><br>新しいクイズが増えたらここに追加されます。何度でも再挑戦できます。</p>
 </div>
 
+<div id="weekCalMount"></div>
+
 <ul class="trail" id="trail"></ul>
 
 <div class="trail-tail" aria-hidden="true">
@@ -57,7 +61,11 @@
   <p>まだまだ増えていきます</p>
 </div>
 
+<script src="quiz-engine.js"></script>
 <script>
+renderStatusBar(document.getElementById('statusBarMount'));
+renderWeekCalendar(document.getElementById('weekCalMount'));
+
 // ============================================================
 // クイズが増えたら、ここに1行足すだけでOK（新しいHTMLファイルとセットで追加）
 // category は "犬の扱い方" / "カット" / "グルーマー" / "特別セミナー" のいずれか
