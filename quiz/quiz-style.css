@@ -1,131 +1,451 @@
-/* 研修クイズ 共通スタイル */
-body {
-  font-family: -apple-system, "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
-  max-width: 640px;
-  margin: 0 auto;
-  padding: 24px 16px 80px;
-  background: #f5f6f8;
-  color: #222;
-  line-height: 1.7;
+/* ============================================================
+   研修クイズ 共通スタイル ver002
+   「毎日ちょっと開きたくなる」体験を目指したリデザイン
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&display=swap');
+
+:root {
+  /* ---- カラートークン（ライト） ---- */
+  --ink: #1c2a22;
+  --ink-soft: #3d4a41;
+  --muted: #93826f;
+  --paper: #fff7ec;
+  --card: #ffffff;
+  --card-line: #f0e4d2;
+  --navy: #0c2038;
+  --navy-ink: #16324f;
+  --orange: #f07830;
+  --orange-deep: #d9611c;
+  --orange-tint: #ffe6d2;
+  --green: #3fa34d;
+  --green-deep: #2f8a3d;
+  --green-tint: #e2f5e0;
+  --red: #e0523f;
+  --red-tint: #fbe3de;
+  --shadow: 220 45% 12%;
+
+  /* ブランドマークカラー：マスコット・スコアカード・カットバッジ専用。
+     テーマが変わっても常に「濃紺の地に明るい文字」の見た目を保つため、
+     ライト/ダークどちらの :root ブロックでも再定義しない（意図的に固定）。 */
+  --brand-navy: #0c2038;
+  --on-brand-navy: #fff7ec;
+  --on-brand-navy-dim: #ffd9b8;
+  --brand-orange: #f07830;
+  --brand-orange-deep: #d9611c;
 }
-h1 { font-size: 20px; margin-bottom: 4px; }
-.sub { color: #666; font-size: 13px; margin-bottom: 24px; }
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ink: #f3ede1;
+    --ink-soft: #d9cfbe;
+    --muted: #a99a86;
+    --paper: #121a2b;
+    --card: #182338;
+    --card-line: #26334c;
+    --navy: #dce8f5;
+    --navy-ink: #eef4fb;
+    --orange: #ff9a54;
+    --orange-deep: #ffb37a;
+    --orange-tint: #3a2a1e;
+    --green: #6fcb7d;
+    --green-deep: #8ad895;
+    --green-tint: #16301c;
+    --red: #ff7b68;
+    --red-tint: #3a1f1c;
+  }
+}
+
+:root[data-theme="dark"] {
+  --ink: #f3ede1;
+  --ink-soft: #d9cfbe;
+  --muted: #a99a86;
+  --paper: #121a2b;
+  --card: #182338;
+  --card-line: #26334c;
+  --navy: #dce8f5;
+  --navy-ink: #eef4fb;
+  --orange: #ff9a54;
+  --orange-deep: #ffb37a;
+  --orange-tint: #3a2a1e;
+  --green: #6fcb7d;
+  --green-deep: #8ad895;
+  --green-tint: #16301c;
+  --red: #ff7b68;
+  --red-tint: #3a1f1c;
+}
+
+* { box-sizing: border-box; }
+
+html { -webkit-text-size-adjust: 100%; }
+
+body {
+  font-family: "Figtree", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 20px 16px 64px;
+  background: var(--paper);
+  color: var(--ink);
+  line-height: 1.65;
+  font-size: 16px;
+}
+
+h1, .display {
+  font-family: "Fredoka", "Hiragino Kaku Gothic ProN", sans-serif;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * { animation-duration: 0.001ms !important; transition-duration: 0.001ms !important; }
+}
+
+/* ---- ヘッダー／マスコット ---- */
+.brand-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+.paw-mark {
+  flex: none;
+  width: 44px;
+  height: 44px;
+}
+.brand-row h1 {
+  font-size: 22px;
+  margin: 0;
+  color: var(--navy-ink);
+}
+.sub {
+  color: var(--muted);
+  font-size: 13.5px;
+  margin: 2px 0 20px;
+}
 .video-info {
-  font-size: 13px;
-  color: #666;
-  background: #fff;
-  border-radius: 10px;
-  padding: 12px 16px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 16px;
+  padding: 14px 16px;
   margin-bottom: 20px;
 }
-.video-info a { color: #3A6E96; }
+.video-info a { color: var(--orange-deep); font-weight: 600; text-decoration: none; }
+.video-info a:hover { text-decoration: underline; }
 
-/* 名前入力画面 */
+/* ---- 進捗バー（肉球スタンプ） ---- */
+.progress-track {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 22px;
+}
+.progress-dot {
+  flex: 1;
+  height: 8px;
+  border-radius: 99px;
+  background: var(--card-line);
+  transition: background 0.25s ease;
+}
+.progress-dot.done { background: var(--orange); }
+.progress-dot.current { background: var(--navy-ink); }
+
+/* ---- 名前入力画面 ---- */
 #nameScreen {
-  background: #fff;
-  border-radius: 10px;
-  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 24px;
+  padding: 32px 24px;
   text-align: center;
+  box-shadow: 0 10px 30px -18px hsl(var(--shadow) / 0.35);
+}
+#nameScreen .mascot-big { width: 84px; height: 84px; margin: 0 auto 14px; }
+#nameScreen p {
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+  font-size: 18px;
+  color: var(--navy-ink);
+  margin: 0 0 16px;
 }
 #nameScreen input {
   width: 100%;
   box-sizing: border-box;
-  padding: 10px 12px;
-  font-size: 15px;
-  border: 1px solid #ccc;
-  border-radius: 8px;
-  margin: 12px 0;
+  padding: 13px 16px;
+  font-size: 16px;
+  font-family: "Figtree", sans-serif;
+  border: 2px solid var(--card-line);
+  border-radius: 14px;
+  margin-bottom: 18px;
+  background: var(--paper);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.15s ease;
 }
-.btn-primary {
-  background: #F07830;
-  color: #fff;
-  border: none;
-  border-radius: 8px;
-  padding: 12px 24px;
-  font-size: 15px;
-  font-weight: 600;
-  cursor: pointer;
-}
-.btn-primary:disabled { background: #ccc; cursor: not-allowed; }
+#nameScreen input:focus { border-color: var(--orange); }
 
-/* クイズ画面 */
-.q {
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px 18px;
-  margin-bottom: 16px;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
+.btn-primary {
+  background: var(--orange);
+  color: #ffffff;
+  border: none;
+  border-radius: 16px;
+  padding: 15px 28px;
+  font-family: "Fredoka", sans-serif;
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  cursor: pointer;
+  box-shadow: 0 5px 0 var(--orange-deep);
+  transition: transform 0.08s ease, box-shadow 0.08s ease;
 }
-.q-title { font-weight: 600; margin-bottom: 10px; }
+.btn-primary:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--orange-deep); }
+.btn-primary:disabled {
+  background: var(--card-line);
+  color: var(--muted);
+  box-shadow: none;
+  cursor: not-allowed;
+}
+
+/* ---- クイズ画面 ---- */
+.q {
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 20px;
+  padding: 20px 20px 18px;
+  margin-bottom: 16px;
+  box-shadow: 0 8px 24px -18px hsl(var(--shadow) / 0.4);
+  animation: card-in 0.28s ease both;
+}
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.q-eyebrow {
+  font-family: "Fredoka", sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  color: var(--orange-deep);
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.q-title {
+  font-weight: 700;
+  font-size: 16.5px;
+  color: var(--ink);
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
 .choice {
   display: block;
   width: 100%;
   text-align: left;
-  padding: 10px 12px;
-  margin: 6px 0;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  background: #fafafa;
+  padding: 13px 16px;
+  margin: 8px 0 0;
+  border: 2px solid var(--card-line);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Figtree", sans-serif;
+  font-size: 15px;
+  font-weight: 500;
   cursor: pointer;
-  font-size: 14px;
+  transition: border-color 0.12s ease, background 0.12s ease, transform 0.08s ease;
 }
-.choice:hover { background: #eef2ff; }
-.choice.selected { background: #e0e7ff; border-color: #3A6E96; }
-.choice.correct { background: #d7f5dd; border-color: #4caf50; }
-.choice.wrong { background: #fbdada; border-color: #e57373; }
+.choice:hover { border-color: var(--orange); }
+.choice:active { transform: scale(0.99); }
+.choice.selected { background: var(--orange-tint); border-color: var(--orange); font-weight: 600; }
+.choice.correct { background: var(--green-tint); border-color: var(--green); font-weight: 700; }
+.choice.wrong { background: var(--red-tint); border-color: var(--red); }
 .explanation {
   display: none;
-  margin-top: 10px;
-  padding: 10px 12px;
-  background: #fff8e1;
-  border-radius: 8px;
-  font-size: 13px;
-  color: #555;
+  margin-top: 12px;
+  padding: 12px 14px;
+  background: var(--orange-tint);
+  border-radius: 12px;
+  font-size: 13.5px;
+  color: var(--ink-soft);
+  line-height: 1.6;
 }
 
-/* 結果画面 */
+/* ---- 結果画面 ---- */
 #resultScreen { display: none; }
 .score-card {
-  background: #0C2038;
-  color: #fff;
-  border-radius: 12px;
-  padding: 24px;
+  background: var(--brand-navy);
+  color: var(--on-brand-navy);
+  border-radius: 24px;
+  padding: 32px 24px 28px;
   text-align: center;
-  margin-bottom: 20px;
+  margin-bottom: 22px;
+  position: relative;
+  overflow: hidden;
 }
-.score-card .score-num { font-size: 36px; font-weight: 700; }
-.score-card .score-name { font-size: 13px; opacity: 0.8; margin-top: 4px; }
-#submitBtnWrap { text-align: center; margin: 20px 0; }
-.retry-link { text-align: center; margin-top: 24px; }
+.score-card .mascot-big { width: 72px; height: 72px; margin: 0 auto 10px; }
+.score-card .score-name {
+  font-size: 13.5px;
+  opacity: 0.8;
+  margin-top: 2px;
+}
+.score-card .score-num {
+  font-family: "Fredoka", sans-serif;
+  font-size: 48px;
+  font-weight: 700;
+  line-height: 1.1;
+  margin: 4px 0 0;
+}
+.score-card .score-label {
+  font-family: "Fredoka", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.75;
+}
+.score-card .score-msg {
+  margin-top: 14px;
+  font-size: 14.5px;
+  font-weight: 600;
+  color: var(--on-brand-navy-dim);
+}
+.score-card.perfect { background: linear-gradient(160deg, var(--brand-orange) 0%, var(--brand-orange-deep) 100%); }
+.score-card.perfect .score-msg { color: #fff; }
+
+#submitBtnWrap { text-align: center; margin: 22px 0 4px; }
+.retry-link { text-align: center; margin-top: 26px; }
 .retry-link a {
   display: inline-block;
-  color: #3A6E96;
+  color: var(--navy-ink);
   text-decoration: none;
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
   font-size: 14px;
-  padding: 10px 16px;
+  padding: 10px 18px;
+  border: 2px solid var(--card-line);
+  border-radius: 12px;
+}
+.retry-link a:hover { border-color: var(--orange); color: var(--orange-deep); }
+
+/* ---- クイズ一覧（ハブ）：レッスンパス ---- */
+.trail-intro {
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 20px;
+  padding: 18px 20px;
+  margin-bottom: 28px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+.trail-intro .mascot-big { width: 52px; height: 52px; flex: none; }
+.trail-intro p { margin: 0; font-size: 14px; color: var(--ink-soft); }
+.trail-intro strong { color: var(--navy-ink); }
+
+.trail {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0 8px;
+  position: relative;
+}
+.trail::before {
+  content: "";
+  position: absolute;
+  top: 28px;
+  bottom: 28px;
+  left: 50%;
+  width: 4px;
+  transform: translateX(-50%);
+  background: repeating-linear-gradient(
+    to bottom, var(--card-line) 0 10px, transparent 10px 20px
+  );
+  z-index: 0;
+}
+.trail-node {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  margin-bottom: 8px;
+}
+.trail-node.align-left { justify-content: flex-start; }
+.trail-node.align-right { justify-content: flex-end; }
+
+.node-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 78%;
+  background: var(--card);
+  border: 1px solid var(--card-line);
+  border-radius: 18px;
+  padding: 12px 16px;
+  text-decoration: none;
+  color: var(--ink);
+  box-shadow: 0 8px 20px -16px hsl(var(--shadow) / 0.45);
+  transition: transform 0.12s ease, border-color 0.12s ease;
+  overflow: hidden;
+}
+.node-card:hover { transform: translateY(-2px); border-color: var(--orange); }
+
+/* クリア済み：淡くグレーアウト＋斜めのClearスタンプ。何度でも再挑戦できるようクリック自体は生かす */
+.node-card.cleared { opacity: 0.55; }
+.node-card.cleared:hover { opacity: 0.85; }
+.node-card .clear-stamp {
+  position: absolute;
+  top: 14px;
+  right: -28px;
+  width: 120px;
+  padding: 3px 0;
+  background: var(--green-deep);
+  color: #fff;
+  font-family: "Fredoka", sans-serif;
+  font-weight: 700;
+  font-size: 12px;
+  letter-spacing: 0.06em;
+  text-align: center;
+  text-transform: uppercase;
+  transform: rotate(28deg);
+  box-shadow: 0 2px 6px hsl(var(--shadow) / 0.3);
+  pointer-events: none;
+}
+.node-badge {
+  flex: none;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: "Fredoka", sans-serif;
+  font-weight: 700;
+  font-size: 15px;
+  color: #fff;
+}
+.node-body { min-width: 0; }
+.node-cat {
+  font-family: "Fredoka", sans-serif;
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  color: var(--orange-deep);
+}
+.node-title {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--ink);
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.node-meta {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin-top: 2px;
 }
 
-/* クイズ一覧（ハブ）画面 */
-.quiz-list { list-style: none; margin: 0; padding: 0; }
-.quiz-card {
-  display: block;
-  background: #fff;
-  border-radius: 10px;
-  padding: 16px 18px;
-  margin-bottom: 12px;
-  text-decoration: none;
-  color: #222;
-  box-shadow: 0 1px 3px rgba(0,0,0,0.08);
-}
-.quiz-card:hover { background: #eef2ff; }
-.quiz-card .quiz-card-title { font-weight: 600; font-size: 16px; }
-.quiz-card .quiz-card-meta { font-size: 12px; color: #888; margin-top: 4px; }
-.quiz-card .quiz-card-tag {
-  display: inline-block;
-  background: #eef2f7;
-  color: #3A6E96;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
-  margin-bottom: 6px;
-}
+/* カテゴリ別バッジ色 */
+.cat-inu { background: var(--orange); }
+.cat-cut { background: var(--brand-navy); }
+.cat-groomer { background: var(--green-deep); }
+.cat-seminar { background: #7a5cc4; }
