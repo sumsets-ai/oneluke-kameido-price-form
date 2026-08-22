@@ -85,7 +85,9 @@ QUIZZES.forEach((quiz, i) => {
   `;
 
   // この端末で一度でもクリア済みなら、淡くグレーアウト＋Clearスタンプ（再挑戦は引き続き可能）
-  if (isCleared(quiz.title)) {
+  // 判定はファイル名（拡張子なし）で行う。クイズ側のquiz_idと必ず一致させること。
+  const quizId = quiz.file.replace(/\.html$/, '');
+  if (isCleared(quizId)) {
     a.classList.add('cleared');
     const stamp = document.createElement('div');
     stamp.className = 'clear-stamp';
