@@ -1,5 +1,5 @@
 /**
- * 研修クイズ 共通エンジン ver002
+ * 研修クイズ 共通エンジン ver003
  *
  * 使い方（各クイズHTML側）:
  *   <div id="app"></div>
@@ -35,6 +35,151 @@ const PAW_SVG = `
   </g>
 </svg>`;
 
+// ============================================================
+// 学習継続の仕組み（連続記録・ポイント・週間ログ）
+// すべてこの端末のlocalStorageに保存する（他の端末とは共有されない）。
+// ============================================================
+const STATS_KEYS = {
+  xp: 'quizXP',
+  streak: 'quizStreakCount',
+  lastActive: 'quizLastActiveDate',
+  activityDates: 'quizActivityDates'
+};
+
+function todayStr() {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+function daysBetween(a, b) {
+  const d1 = new Date(a + 'T00:00:00');
+  const d2 = new Date(b + 'T00:00:00');
+  return Math.round((d2 - d1) / 86400000);
+}
+
+function getXP() {
+  try { return parseInt(localStorage.getItem(STATS_KEYS.xp) || '0', 10) || 0; } catch (e) { return 0; }
+}
+function addXP(amount) {
+  try { localStorage.setItem(STATS_KEYS.xp, String(getXP() + amount)); } catch (e) {}
+}
+function getStreak() {
+  try { return parseInt(localStorage.getItem(STATS_KEYS.streak) || '0', 10) || 0; } catch (e) { return 0; }
+}
+function getActivityDates() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(STATS_KEYS.activityDates) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// クイズを1本完了した時に呼ぶ。ストリーク更新・週間ログ追加・XP付与をまとめて行い、
+// 新しいストリーク日数と獲得XPを返す。
+function recordCompletion(score, total) {
+  const today = todayStr();
+  let last = null;
+  try { last = localStorage.getItem(STATS_KEYS.lastActive); } catch (e) {}
+
+  let streak = getStreak();
+  if (last === today) {
+    // 今日はもう記録済み（連続記録はそのまま）
+  } else if (last && daysBetween(last, today) === 1) {
+    streak += 1;
+  } else {
+    streak = 1;
+  }
+
+  try {
+    localStorage.setItem(STATS_KEYS.streak, String(streak));
+    localStorage.setItem(STATS_KEYS.lastActive, today);
+    const dates = getActivityDates();
+    if (!dates.includes(today)) {
+      dates.push(today);
+      localStorage.setItem(STATS_KEYS.activityDates, JSON.stringify(dates));
+    }
+  } catch (e) {}
+
+  const gained = score === total ? 20 : 10;
+  addXP(gained);
+
+  return { streak, xp: getXP(), gained };
+}
+
+// 今週（日曜始まり）にクイズをやった曜日の一覧を返す（一覧ページの週間カレンダー用）
+function getWeekProgress() {
+  const dates = new Set(getActivityDates());
+  const now = new Date();
+  const dayOfWeek = now.getDay(); // 0=日曜
+  const labels = ['日', '月', '火', '水', '木', '金', '土'];
+  const result = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - dayOfWeek + i);
+    const s = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+    result.push({ label: labels[i], done: dates.has(s), isToday: i === dayOfWeek });
+  }
+  return result;
+}
+
+// ページ上部の固定ステータスバー（🔥連続記録・⭐ポイント）を描画する。
+// クイズ一覧ページ・クイズページの両方から呼べる共通関数。
+function renderStatusBar(container) {
+  if (!container) return;
+  container.innerHTML = `
+    <div class="status-bar">
+      <div class="status-chip">🔥<span>${getStreak()}</span>日</div>
+      <div class="status-chip">⭐<span>${getXP()}</span>pt</div>
+    </div>
+  `;
+}
+
+// 週間カレンダーを描画する（クイズ一覧ページ用）
+function renderWeekCalendar(container) {
+  if (!container) return;
+  const week = getWeekProgress();
+  container.innerHTML = `
+    <div class="week-cal">
+      ${week.map(d => `
+        <div class="week-day">
+          <div class="week-day-label${d.isToday ? ' today' : ''}">${d.label}</div>
+          <div class="week-day-dot${d.done ? ' done' : ''}"></div>
+        </div>
+      `).join('')}
+    </div>
+  `;
+}
+
+// ============================================================
+// 受講者プロフィール（所属店舗・氏名）
+// 一度入力すればこの端末に保存され、次回以降は入力画面を出さずに直接クイズへ進む。
+// ============================================================
+const PROFILE_KEYS = { name: 'quizUserName', store: 'quizUserStore' };
+
+function getProfile() {
+  try {
+    return {
+      name: localStorage.getItem(PROFILE_KEYS.name) || '',
+      store: localStorage.getItem(PROFILE_KEYS.store) || ''
+    };
+  } catch (e) {
+    return { name: '', store: '' };
+  }
+}
+function saveProfile(name, store) {
+  try {
+    localStorage.setItem(PROFILE_KEYS.name, name);
+    localStorage.setItem(PROFILE_KEYS.store, store);
+  } catch (e) {}
+}
+function clearProfile() {
+  try {
+    localStorage.removeItem(PROFILE_KEYS.name);
+    localStorage.removeItem(PROFILE_KEYS.store);
+  } catch (e) {}
+}
+
 // 満点時の吹き出しメッセージ（ランダム）
 const PERFECT_MESSAGES = [
   "満点！お店の看板を任せられそうです🐾",
@@ -53,6 +198,8 @@ function initQuiz(config) {
 
   const app = document.getElementById('app');
   app.innerHTML = `
+    <div id="statusBarMount"></div>
+
     <div class="brand-row">
       <div class="paw-mark">${PAW_SVG}</div>
       <h1>研修クイズ：${escapeHtml(config.video_title)}</h1>
@@ -65,11 +212,14 @@ function initQuiz(config) {
 
     <div id="nameScreen">
       <div class="mascot-big">${PAW_SVG}</div>
-      <p>お名前を入力してから始めましょう</p>
-      <input type="text" id="nameInput" placeholder="例：山田太郎">
+      <p>最初に登録しましょう（次回から入力不要になります）</p>
+      <input type="text" id="storeInput" placeholder="所属店舗名（例：ワンルーク亀戸店）">
+      <input type="text" id="nameInput" placeholder="お名前（フルネーム）">
       <br>
       <button class="btn-primary" id="startBtn">クイズをはじめる</button>
     </div>
+
+    <div id="profileBar" style="display:none;"></div>
 
     <div id="progressTrack" class="progress-track" style="display:none;"></div>
     <div id="quiz" style="display:none;"></div>
@@ -84,18 +234,39 @@ function initQuiz(config) {
         <div class="score-num" id="resultScore"></div>
         <div class="score-label">正解</div>
         <div class="score-msg" id="resultMsg"></div>
+        <div class="xp-gain" id="xpGain"></div>
+      </div>
+      <div id="reviewCta" class="review-cta" style="display:none;">
+        <button class="btn-primary" id="reviewBtn">苦手な問題だけもう一度</button>
       </div>
       <div id="resultDetail"></div>
       <div class="retry-link"><a href="javascript:location.reload()">もう一度挑戦する</a></div>
     </div>
+
+    <div id="reviewScreen">
+      <div class="brand-row" style="margin-bottom:14px;">
+        <div class="paw-mark">${PAW_SVG}</div>
+        <h1 style="font-size:18px;">苦手な問題を復習</h1>
+      </div>
+      <div id="reviewQuiz"></div>
+      <div id="reviewDone" class="review-done" style="display:none;">
+        <p>おつかれさまでした！🐾<br>動画をもう一度見て、次は満点を狙いましょう。</p>
+      </div>
+      <div class="retry-link"><a href="javascript:location.reload()">結果画面にもどる</a></div>
+    </div>
   `;
 
+  renderStatusBar(document.getElementById('statusBarMount'));
+
   const nameScreen = document.getElementById('nameScreen');
+  const profileBar = document.getElementById('profileBar');
   const quizEl = document.getElementById('quiz');
   const progressTrack = document.getElementById('progressTrack');
   const submitBtnWrap = document.getElementById('submitBtnWrap');
   const submitBtn = document.getElementById('submitBtn');
   const resultScreen = document.getElementById('resultScreen');
+  const reviewScreen = document.getElementById('reviewScreen');
+  let userStore = "";
 
   // --- 進捗バーの初期描画 ---
   questions.forEach(() => {
@@ -111,17 +282,49 @@ function initQuiz(config) {
     });
   }
 
-  // --- ① 名前入力 → クイズ表示 ---
-  document.getElementById('startBtn').onclick = () => {
-    const v = document.getElementById('nameInput').value.trim();
-    if (!v) { alert('お名前を入力してください'); return; }
-    userName = v;
+  // --- ① 登録済みプロフィールがあれば、名前入力をスキップして直接クイズへ ---
+  const savedProfile = getProfile();
+  if (savedProfile.name) {
+    userName = savedProfile.name;
+    userStore = savedProfile.store;
     nameScreen.style.display = 'none';
+    showProfileBar();
+    beginQuiz();
+  } else {
+    document.getElementById('startBtn').onclick = () => {
+      const nameVal = document.getElementById('nameInput').value.trim();
+      const storeVal = document.getElementById('storeInput').value.trim();
+      if (!nameVal) { alert('お名前を入力してください'); return; }
+      userName = nameVal;
+      userStore = storeVal;
+      saveProfile(userName, userStore);
+      nameScreen.style.display = 'none';
+      showProfileBar();
+      beginQuiz();
+    };
+  }
+
+  function showProfileBar() {
+    profileBar.style.display = 'block';
+    profileBar.innerHTML = `
+      <div class="video-info" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
+        <span>${escapeHtml(userName)}さんとして挑戦中${userStore ? '（' + escapeHtml(userStore) + '）' : ''}</span>
+        <a href="#" id="switchUserLink" style="color:var(--tiffany-deep); font-weight:600; white-space:nowrap;">別の人はこちら</a>
+      </div>
+    `;
+    document.getElementById('switchUserLink').onclick = (e) => {
+      e.preventDefault();
+      clearProfile();
+      location.reload();
+    };
+  }
+
+  function beginQuiz() {
     progressTrack.style.display = 'flex';
     quizEl.style.display = 'block';
     submitBtnWrap.style.display = 'block';
     renderQuiz();
-  };
+  }
 
   // --- ② クイズ描画（選択のみ、正誤はまだ出さない） ---
   function renderQuiz() {
@@ -214,6 +417,20 @@ function initQuiz(config) {
       ? pickRandom(PERFECT_MESSAGES)
       : pickRandom(GOOD_MESSAGES);
 
+    // ストリーク・ポイントを更新し、獲得ポイントを表示。ヘッダーのステータスバーも更新する。
+    const stats = recordCompletion(score, questions.length);
+    document.getElementById('xpGain').textContent = `+${stats.gained}pt 獲得！（累計${stats.xp}pt・連続${stats.streak}日）`;
+    renderStatusBar(document.getElementById('statusBarMount'));
+
+    // 満点でなければ「苦手な問題だけもう一度」を出す
+    const reviewCta = document.getElementById('reviewCta');
+    if (!isPerfect) {
+      reviewCta.style.display = 'block';
+      document.getElementById('reviewBtn').onclick = () => startReview();
+    } else {
+      reviewCta.style.display = 'none';
+    }
+
     quizEl.style.display = 'none';
     progressTrack.style.display = 'none';
     submitBtnWrap.style.display = 'none';
@@ -221,8 +438,66 @@ function initQuiz(config) {
     window.scrollTo(0, 0);
 
     markCleared(config.quiz_id || config.video_title);
-    sendResult(config, questions, selected, userName, score);
+    sendResult(config, questions, selected, userName, userStore, score);
   };
+
+  // --- ④ 苦手な問題だけの復習（Airtableへの再送信はしない、その場の練習用） ---
+  function startReview() {
+    const wrongQuestions = questions.filter((item, qi) => selected[qi] !== item.answer);
+    const reviewQuizEl = document.getElementById('reviewQuiz');
+    const reviewDone = document.getElementById('reviewDone');
+    reviewQuizEl.innerHTML = '';
+    reviewDone.style.display = 'none';
+
+    let doneCount = 0;
+
+    wrongQuestions.forEach((item, qi) => {
+      const qDiv = document.createElement('div');
+      qDiv.className = 'q';
+
+      const eyebrow = document.createElement('div');
+      eyebrow.className = 'q-eyebrow';
+      eyebrow.textContent = `復習 ${qi + 1} / ${wrongQuestions.length}`;
+      qDiv.appendChild(eyebrow);
+
+      const title = document.createElement('div');
+      title.className = 'q-title';
+      title.textContent = item.q;
+      qDiv.appendChild(title);
+
+      let answered = false;
+      item.choices.forEach((choiceText, ci) => {
+        const btn = document.createElement('button');
+        btn.className = 'choice';
+        btn.textContent = choiceText;
+        btn.onclick = () => {
+          if (answered) return;
+          answered = true;
+          doneCount++;
+          qDiv.querySelectorAll('.choice').forEach((b, bi) => {
+            if (bi === item.answer) b.classList.add('correct');
+            else if (bi === ci) b.classList.add('wrong');
+          });
+          exp.style.display = 'block';
+          if (doneCount === wrongQuestions.length) {
+            reviewDone.style.display = 'block';
+          }
+        };
+        qDiv.appendChild(btn);
+      });
+
+      const exp = document.createElement('div');
+      exp.className = 'explanation';
+      exp.textContent = item.explanation;
+      qDiv.appendChild(exp);
+
+      reviewQuizEl.appendChild(qDiv);
+    });
+
+    resultScreen.style.display = 'none';
+    reviewScreen.style.display = 'block';
+    window.scrollTo(0, 0);
+  }
 }
 
 // --- 一覧ページの「Clear」スタンプ用（この端末のブラウザに記録） ---
@@ -241,7 +516,7 @@ function pickRandom(arr) {
 
 // --- 回答結果の送信（Airtable連携用） ---
 // 画面には状態を表示しない。送信の成否はブラウザの開発者ツール（コンソール）にのみ記録する。
-function sendResult(config, questions, selected, userName, score) {
+function sendResult(config, questions, selected, userName, userStore, score) {
   const detailText = questions.map((item, qi) => {
     const isCorrect = selected[qi] === item.answer;
     return `Q${qi + 1}. ${item.q}\n`
@@ -253,6 +528,7 @@ function sendResult(config, questions, selected, userName, score) {
     合言葉: QUIZ_SHARED_SECRET,
     送信ID: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
     受講者名: userName,
+    所属店舗: userStore,
     動画タイトル: config.video_title,
     受講日時: new Date().toISOString(),
     正答数: score,
@@ -268,7 +544,11 @@ function sendResult(config, questions, selected, userName, score) {
 // 次に別のクイズページを開いたタイミングで自動的に再送を試みる。
 const PENDING_KEY = 'quizPendingSubmissions';
 
-function postToWebhook(payload) {
+// 送信失敗時、その場で3回まで自動リトライ（1.5秒→3秒間隔）してから再送キューへ回す。
+// キューからは「送信成功が確定した時」にしか消さない。
+// （先にキューを空にしてから送るやり方だと、再試行中にページを閉じた場合にデータが消えてしまうため）
+function postToWebhook(payload, attempt) {
+  attempt = attempt || 1;
   fetch(QUIZ_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -278,15 +558,31 @@ function postToWebhook(payload) {
   }).then(res => {
     if (!res.ok) throw new Error('status ' + res.status);
     console.log('[研修クイズ] 送信OK', payload);
+    removeFromPending(payload.送信ID);
   }).catch(err => {
-    console.error('[研修クイズ] 送信失敗。再送キューに保存します:', err.message, payload);
-    queuePending(payload);
+    if (attempt < 3) {
+      console.warn(`[研修クイズ] 送信失敗（${attempt}回目）。再試行します:`, err.message);
+      setTimeout(() => postToWebhook(payload, attempt + 1), attempt * 1500);
+    } else {
+      console.error('[研修クイズ] 送信失敗（3回試行）。再送キューに保存します:', err.message, payload);
+      queuePending(payload);
+    }
   });
 }
 
+function readPendingList() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+// 送信IDで重複を避けつつキューに積む（既にキューにある場合は上書き）
 function queuePending(payload) {
   try {
-    const list = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
+    const list = readPendingList().filter(p => p && p.送信ID !== payload.送信ID);
     list.push(payload);
     localStorage.setItem(PENDING_KEY, JSON.stringify(list));
   } catch (e) {
@@ -294,16 +590,18 @@ function queuePending(payload) {
   }
 }
 
-// ページ読み込み時に、前回以前に送信できなかった分があれば自動で再送を試みる
-function flushPendingSubmissions() {
-  let list;
+function removeFromPending(sendId) {
   try {
-    list = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]');
-  } catch (e) {
-    return;
-  }
+    const list = readPendingList().filter(p => p && p.送信ID !== sendId);
+    localStorage.setItem(PENDING_KEY, JSON.stringify(list));
+  } catch (e) {}
+}
+
+// ページ読み込み時に、前回以前に送信できなかった分があれば自動で再送を試みる。
+// 送信が確定するまでキューからは消さないので、再試行中にページを閉じても記録は残る。
+function flushPendingSubmissions() {
+  const list = readPendingList();
   if (!list.length) return;
-  try { localStorage.removeItem(PENDING_KEY); } catch (e) {}
   list.forEach(payload => postToWebhook(payload));
 }
 flushPendingSubmissions();
