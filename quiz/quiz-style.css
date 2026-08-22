@@ -130,6 +130,19 @@ h1, .display {
 }
 
 /* ---- ヘッダー／マスコット ---- */
+.hub-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 10px;
+  color: var(--tiffany-deep);
+  text-decoration: none;
+  font-family: "Fredoka", sans-serif;
+  font-weight: 600;
+  font-size: 13.5px;
+}
+.hub-link:hover { text-decoration: underline; }
+
 .brand-row {
   display: flex;
   align-items: center;
