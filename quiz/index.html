@@ -88,13 +88,14 @@ const CATEGORY_CLASS = {
 };
 
 const trailEl = document.getElementById('trail');
+// カテゴリごとに「直前の1本をクリアするまで次は挑戦不可」にする（カテゴリをまたいだ順番待ちはしない）
+const lastClearedInCategory = {};
 QUIZZES.forEach((quiz, i) => {
   const li = document.createElement('li');
   li.className = 'trail-node ' + (i % 2 === 0 ? 'align-left' : 'align-right');
 
   const a = document.createElement('a');
   a.className = 'node-card';
-  a.href = quiz.file;
 
   const badge = document.createElement('div');
   badge.className = 'node-badge ' + (CATEGORY_CLASS[quiz.category] || 'cat-inu');
@@ -102,22 +103,45 @@ QUIZZES.forEach((quiz, i) => {
 
   const body = document.createElement('div');
   body.className = 'node-body';
-  body.innerHTML = `
-    <div class="node-cat">${escapeHtml(quiz.category)}</div>
-    <div class="node-title">${escapeHtml(quiz.title)}</div>
-    <div class="node-meta">全${quiz.count}問・約${Math.max(3, Math.round(quiz.count * 0.8))}分</div>
-  `;
 
   // この端末で一度でもクリア済みなら、淡くグレーアウト＋Clearスタンプ（再挑戦は引き続き可能）
   // 判定はファイル名（拡張子なし）で行う。クイズ側のquiz_idと必ず一致させること。
   const quizId = quiz.file.replace(/\.html$/, '');
-  if (isCleared(quizId)) {
+  const cleared = isCleared(quizId);
+  const isFirstInCategory = !(quiz.category in lastClearedInCategory);
+  const locked = !isFirstInCategory && !lastClearedInCategory[quiz.category];
+
+  if (locked) {
+    a.classList.add('locked');
+    a.removeAttribute('href');
+    body.innerHTML = `
+      <div class="node-cat">${escapeHtml(quiz.category)}</div>
+      <div class="node-title">${escapeHtml(quiz.title)}</div>
+      <div class="lock-hint">前のクイズをクリアすると挑戦できます</div>
+    `;
+    const lockBadge = document.createElement('div');
+    lockBadge.className = 'lock-badge';
+    lockBadge.textContent = '🔒';
+    a.appendChild(lockBadge);
+  } else {
+    a.href = quiz.file;
+    body.innerHTML = `
+      <div class="node-cat">${escapeHtml(quiz.category)}</div>
+      <div class="node-title">${escapeHtml(quiz.title)}</div>
+      <div class="node-meta">全${quiz.count}問・約${Math.max(3, Math.round(quiz.count * 0.8))}分</div>
+    `;
+  }
+
+  if (cleared) {
     a.classList.add('cleared');
     const stamp = document.createElement('div');
     stamp.className = 'clear-stamp';
     stamp.textContent = 'Clear!';
     a.appendChild(stamp);
   }
+
+  // このカテゴリの「直前のクイズはクリア済みか」を次のループのために更新
+  lastClearedInCategory[quiz.category] = cleared;
 
   a.appendChild(badge);
   a.appendChild(body);
