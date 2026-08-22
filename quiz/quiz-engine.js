@@ -1,5 +1,5 @@
 /**
- * 研修クイズ 共通エンジン
+ * 研修クイズ 共通エンジン ver002
  *
  * 使い方（各クイズHTML側）:
  *   <div id="app"></div>
@@ -23,6 +23,29 @@
 const QUIZ_WEBHOOK_URL = "https://hook.us2.make.com/yffxvvnnq7vwu2b1pbeju5966gw1nqjw";
 const QUIZ_SHARED_SECRET = "oneluke-quiz-2026";
 
+// 肉球マスコット（LINEアイコンと同じネイビー×オレンジ）
+const PAW_SVG = `
+<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="肉球マスコット">
+  <circle cx="50" cy="50" r="50" fill="var(--brand-navy)"/>
+  <g fill="var(--orange)">
+    <ellipse cx="50" cy="61" rx="20.5" ry="16.5"/>
+    <circle cx="32" cy="40" r="8.2"/>
+    <circle cx="50" cy="34" r="8.8"/>
+    <circle cx="68" cy="40" r="8.2"/>
+  </g>
+</svg>`;
+
+// 満点時の吹き出しメッセージ（ランダム）
+const PERFECT_MESSAGES = [
+  "満点！お店の看板を任せられそうです🐾",
+  "パーフェクト！次のシフトでも頼りにしてます",
+  "全問正解、さすがです！この調子で次のクイズも",
+];
+const GOOD_MESSAGES = [
+  "あと少し！間違えた問題だけ動画で見直してみましょう",
+  "いい感じです。もう一度動画を確認して満点を狙いましょう",
+];
+
 function initQuiz(config) {
   const questions = config.questions;
   const selected = new Array(questions.length).fill(null);
@@ -30,7 +53,10 @@ function initQuiz(config) {
 
   const app = document.getElementById('app');
   app.innerHTML = `
-    <h1>研修クイズ：${escapeHtml(config.video_title)}</h1>
+    <div class="brand-row">
+      <div class="paw-mark">${PAW_SVG}</div>
+      <h1>研修クイズ：${escapeHtml(config.video_title)}</h1>
+    </div>
     <div class="sub">${escapeHtml(config.category || '')}</div>
     <div class="video-info">
       対象動画：<a href="${escapeHtml(config.source_url)}" target="_blank">「${escapeHtml(config.video_title)}」</a><br>
@@ -38,22 +64,26 @@ function initQuiz(config) {
     </div>
 
     <div id="nameScreen">
-      <p>お名前を入力してから始めてください</p>
+      <div class="mascot-big">${PAW_SVG}</div>
+      <p>お名前を入力してから始めましょう</p>
       <input type="text" id="nameInput" placeholder="例：山田太郎">
       <br>
       <button class="btn-primary" id="startBtn">クイズをはじめる</button>
     </div>
 
+    <div id="progressTrack" class="progress-track" style="display:none;"></div>
     <div id="quiz" style="display:none;"></div>
     <div id="submitBtnWrap" style="display:none;">
       <button class="btn-primary" id="submitBtn" disabled>採点する（全問回答してください）</button>
     </div>
 
     <div id="resultScreen">
-      <div class="score-card">
+      <div class="score-card" id="scoreCard">
+        <div class="mascot-big">${PAW_SVG}</div>
         <div class="score-name" id="resultName"></div>
         <div class="score-num" id="resultScore"></div>
-        <div class="score-name">正解</div>
+        <div class="score-label">正解</div>
+        <div class="score-msg" id="resultMsg"></div>
       </div>
       <div id="resultDetail"></div>
       <div class="retry-link"><a href="javascript:location.reload()">もう一度挑戦する</a></div>
@@ -62,9 +92,24 @@ function initQuiz(config) {
 
   const nameScreen = document.getElementById('nameScreen');
   const quizEl = document.getElementById('quiz');
+  const progressTrack = document.getElementById('progressTrack');
   const submitBtnWrap = document.getElementById('submitBtnWrap');
   const submitBtn = document.getElementById('submitBtn');
   const resultScreen = document.getElementById('resultScreen');
+
+  // --- 進捗バーの初期描画 ---
+  questions.forEach(() => {
+    const dot = document.createElement('div');
+    dot.className = 'progress-dot';
+    progressTrack.appendChild(dot);
+  });
+
+  function updateProgress() {
+    const dots = progressTrack.querySelectorAll('.progress-dot');
+    dots.forEach((dot, i) => {
+      dot.classList.toggle('done', selected[i] !== null);
+    });
+  }
 
   // --- ① 名前入力 → クイズ表示 ---
   document.getElementById('startBtn').onclick = () => {
@@ -72,6 +117,7 @@ function initQuiz(config) {
     if (!v) { alert('お名前を入力してください'); return; }
     userName = v;
     nameScreen.style.display = 'none';
+    progressTrack.style.display = 'flex';
     quizEl.style.display = 'block';
     submitBtnWrap.style.display = 'block';
     renderQuiz();
@@ -82,9 +128,15 @@ function initQuiz(config) {
     questions.forEach((item, qi) => {
       const qDiv = document.createElement('div');
       qDiv.className = 'q';
+
+      const eyebrow = document.createElement('div');
+      eyebrow.className = 'q-eyebrow';
+      eyebrow.textContent = `Q${qi + 1} / ${questions.length}`;
+      qDiv.appendChild(eyebrow);
+
       const title = document.createElement('div');
       title.className = 'q-title';
-      title.textContent = `Q${qi + 1}. ${item.q}`;
+      title.textContent = item.q;
       qDiv.appendChild(title);
 
       item.choices.forEach((choiceText, ci) => {
@@ -95,6 +147,7 @@ function initQuiz(config) {
           selected[qi] = ci;
           qDiv.querySelectorAll('.choice').forEach(b => b.classList.remove('selected'));
           btn.classList.add('selected');
+          updateProgress();
           checkAllAnswered();
         };
         qDiv.appendChild(btn);
@@ -124,9 +177,15 @@ function initQuiz(config) {
 
       const qDiv = document.createElement('div');
       qDiv.className = 'q';
+
+      const eyebrow = document.createElement('div');
+      eyebrow.className = 'q-eyebrow';
+      eyebrow.textContent = `Q${qi + 1}　${isCorrect ? '⭕️ 正解' : '❌ 不正解'}`;
+      qDiv.appendChild(eyebrow);
+
       const title = document.createElement('div');
       title.className = 'q-title';
-      title.textContent = `Q${qi + 1}. ${item.q}　${isCorrect ? '⭕️' : '❌'}`;
+      title.textContent = item.q;
       qDiv.appendChild(title);
 
       item.choices.forEach((choiceText, ci) => {
@@ -147,16 +206,36 @@ function initQuiz(config) {
       detailEl.appendChild(qDiv);
     });
 
+    const isPerfect = score === questions.length;
     document.getElementById('resultName').textContent = `${userName} さん`;
     document.getElementById('resultScore').textContent = `${score} / ${questions.length}`;
+    document.getElementById('scoreCard').classList.toggle('perfect', isPerfect);
+    document.getElementById('resultMsg').textContent = isPerfect
+      ? pickRandom(PERFECT_MESSAGES)
+      : pickRandom(GOOD_MESSAGES);
 
     quizEl.style.display = 'none';
+    progressTrack.style.display = 'none';
     submitBtnWrap.style.display = 'none';
     resultScreen.style.display = 'block';
     window.scrollTo(0, 0);
 
+    markCleared(config.video_title);
     sendResult(config, questions, selected, userName, score);
   };
+}
+
+// --- 一覧ページの「Clear」スタンプ用（この端末のブラウザに記録） ---
+function markCleared(videoTitle) {
+  try {
+    localStorage.setItem('quizCleared:' + videoTitle, '1');
+  } catch (e) {
+    // localStorageが使えない環境では何もしない（挑戦自体は問題なく完了する）
+  }
+}
+
+function pickRandom(arr) {
+  return arr[Math.floor(Math.random() * arr.length)];
 }
 
 // --- 回答結果の送信（Airtable連携用） ---
@@ -183,7 +262,9 @@ function sendResult(config, questions, selected, userName, score) {
   fetch(QUIZ_WEBHOOK_URL, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
+    body: JSON.stringify(payload),
+    // 結果表示直後に「もう一度挑戦する」等でページ離脱しても送信が中断されないようにする
+    keepalive: true
   }).then(res => {
     if (!res.ok) throw new Error('status ' + res.status);
     console.log('[研修クイズ] 送信OK', payload);
