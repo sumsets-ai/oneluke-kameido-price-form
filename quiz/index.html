@@ -131,14 +131,7 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// クイズ本体（quiz-engine.js）が採点完了時に localStorage へ記録したフラグを見る
-function isCleared(videoTitle) {
-  try {
-    return localStorage.getItem('quizCleared:' + videoTitle) === '1';
-  } catch (e) {
-    return false;
-  }
-}
+// isCleared()はquiz-engine.js側で定義済み（登録済みの氏名ごとに判定する）ものをそのまま使う
 </script>
 
 </body>
