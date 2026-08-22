@@ -1,6 +1,8 @@
 /* ============================================================
-   研修クイズ 共通スタイル ver003
+   研修クイズ 共通スタイル ver004
    白地＋ティファニーブルー＋ポップな差し色（お店のブランドカラーに合わせて）
+   2026-08-22: 女性スタッフが多いお店のため、端末のダークモード設定に関わらず
+   常にこのライトな配色で表示する仕様に固定（ダークモード対応をやめた）。
    ============================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&display=swap');
@@ -35,49 +37,7 @@
   --brand-orange-deep: #d9611c;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) {
-    --ink: #eef7f6;
-    --ink-soft: #cfe2e0;
-    --muted: #92aeac;
-    --paper: #0f1a1b;
-    --card: #172626;
-    --card-line: #274040;
-    --tiffany: #5fe1da;
-    --tiffany-deep: #8ff0ea;
-    --tiffany-tint: #123331;
-    --orange: #ff9a54;
-    --orange-deep: #ffb37a;
-    --orange-tint: #3a2a1e;
-    --green: #6fcb7d;
-    --green-deep: #8ad895;
-    --green-tint: #16301c;
-    --red: #ff7b68;
-    --red-tint: #3a1f1c;
-    --purple: #a98ee8;
-  }
-}
-
-:root[data-theme="dark"] {
-  --ink: #eef7f6;
-  --ink-soft: #cfe2e0;
-  --muted: #92aeac;
-  --paper: #0f1a1b;
-  --card: #172626;
-  --card-line: #274040;
-  --tiffany: #5fe1da;
-  --tiffany-deep: #8ff0ea;
-  --tiffany-tint: #123331;
-  --orange: #ff9a54;
-  --orange-deep: #ffb37a;
-  --orange-tint: #3a2a1e;
-  --green: #6fcb7d;
-  --green-deep: #8ad895;
-  --green-tint: #16301c;
-  --red: #ff7b68;
-  --red-tint: #3a1f1c;
-  --purple: #a98ee8;
-}
+/* ダークモード対応は行わない（お店のカラーに合わせて常に上記のライト配色で固定表示する） */
 
 * { box-sizing: border-box; }
 
