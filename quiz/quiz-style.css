@@ -247,7 +247,7 @@ h1, .display {
   margin: 8px 0 0;
   border: 2px solid var(--card-line);
   border-radius: 14px;
-  background: #fbfefe;
+  background: var(--card);
   color: var(--ink);
   font-family: "Figtree", sans-serif;
   font-size: 15px;
