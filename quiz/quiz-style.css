@@ -491,6 +491,26 @@ h1, .display {
 /* クリア済み：淡くグレーアウト＋斜めのClearスタンプ。何度でも再挑戦できるようクリック自体は生かす */
 .node-card.cleared { opacity: 0.55; }
 .node-card.cleared:hover { opacity: 0.85; }
+/* 未解放（前のクイズをクリアするまで挑戦できない）：淡くグレーアウト＋鍵アイコン。クリックしても遷移しない */
+.node-card.locked {
+  opacity: 0.5;
+  cursor: default;
+  pointer-events: none;
+}
+.node-card.locked:hover { transform: none; border-color: var(--card-line); }
+.node-card.locked .node-badge { background: var(--muted); }
+.node-card .lock-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 18px;
+  line-height: 1;
+}
+.node-card .lock-hint {
+  font-size: 11px;
+  color: var(--muted);
+  margin-top: 2px;
+}
 .node-card .clear-stamp {
   position: absolute;
   top: 14px;
