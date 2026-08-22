@@ -23,11 +23,11 @@
 const QUIZ_WEBHOOK_URL = "https://hook.us2.make.com/yffxvvnnq7vwu2b1pbeju5966gw1nqjw";
 const QUIZ_SHARED_SECRET = "oneluke-quiz-2026";
 
-// 肉球マスコット（LINEアイコンと同じネイビー×オレンジ）
+// 肉球マスコット（お店のブランドカラー：ティファニーブルー×白）
 const PAW_SVG = `
 <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="肉球マスコット">
-  <circle cx="50" cy="50" r="50" fill="var(--brand-navy)"/>
-  <g fill="var(--orange)">
+  <circle cx="50" cy="50" r="50" fill="var(--brand-tiffany)"/>
+  <g fill="#ffffff">
     <ellipse cx="50" cy="61" rx="20.5" ry="16.5"/>
     <circle cx="32" cy="40" r="8.2"/>
     <circle cx="50" cy="34" r="8.8"/>
