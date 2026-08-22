@@ -72,7 +72,9 @@ h1, .display {
   display: flex;
   justify-content: center;
   gap: 10px;
-  margin: -20px -16px 16px;
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+  margin-bottom: 16px;
   padding: 10px 16px;
   background: rgba(255, 255, 255, 0.92);
   backdrop-filter: blur(6px);
@@ -161,11 +163,18 @@ h1, .display {
 .video-info a { color: var(--tiffany-deep); font-weight: 600; text-decoration: none; }
 .video-info a:hover { text-decoration: underline; }
 
-/* ---- 進捗バー ---- */
+/* ---- 進捗バー（回答中はステータスバーの下に固定表示） ---- */
 .progress-track {
+  position: sticky;
+  top: 48px;
+  z-index: 15;
   display: flex;
   gap: 6px;
-  margin-bottom: 22px;
+  margin: 0 -16px 22px;
+  padding: 10px 16px;
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--card-line);
 }
 .progress-dot {
   flex: 1;
