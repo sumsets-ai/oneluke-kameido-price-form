@@ -203,6 +203,8 @@ function initQuiz(config) {
   app.innerHTML = `
     <div id="statusBarMount"></div>
 
+    <a class="hub-link" href="${escapeHtml(config.hub_url || 'クイズ一覧.html')}">← クイズ一覧へ戻る</a>
+
     <div class="brand-row">
       <div class="paw-mark">${PAW_SVG}</div>
       <h1>研修クイズ：${escapeHtml(config.video_title)}</h1>
