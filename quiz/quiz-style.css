@@ -209,6 +209,7 @@ h1, .display {
   box-shadow: 0 10px 30px -18px hsl(var(--shadow) / 0.3);
 }
 #nameScreen .mascot-big { width: 84px; height: 84px; margin: 0 auto 14px; }
+#videoConfirmScreen .mascot-big { width: 56px; height: 56px; margin: 0 auto 12px; }
 #nameScreen p {
   font-family: "Fredoka", sans-serif;
   font-weight: 600;
