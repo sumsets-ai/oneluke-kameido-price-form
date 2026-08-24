@@ -529,6 +529,15 @@ h1, .display {
   box-shadow: 0 2px 6px hsl(var(--shadow) / 0.25);
   pointer-events: none;
 }
+/* パーフェクト（満点）称号：進行の解放条件ではなく、達成した人にだけ付く星バッジ */
+.node-card .perfect-badge {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  font-size: 15px;
+  line-height: 1;
+  filter: drop-shadow(0 1px 1px hsl(var(--shadow) / 0.3));
+}
 .node-badge {
   flex: none;
   width: 46px;
