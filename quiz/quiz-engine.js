@@ -1,5 +1,6 @@
 /**
- * 研修クイズ 共通エンジン ver003
+ * 研修クイズ 共通エンジン ver004
+ * （2026-08-25：段階的な合格ライン・パーフェクト称号・動画確認ゲート・離脱率記録を追加）
  *
  * 使い方（各クイズHTML側）:
  *   <div id="app"></div>
@@ -22,6 +23,9 @@
 // ============================================================
 const QUIZ_WEBHOOK_URL = "https://hook.us2.make.com/yffxvvnnq7vwu2b1pbeju5966gw1nqjw";
 const QUIZ_SHARED_SECRET = "oneluke-quiz-2026";
+
+// 合格ライン（この割合以上の正答率で「合格」＝次のクイズが解放される。100%は別途「パーフェクト」称号）
+const PASS_THRESHOLD = 0.7;
 
 // 肉球マスコット（お店のブランドカラー：ティファニーブルー×白）
 const PAW_SVG = `
@@ -193,6 +197,10 @@ const GOOD_MESSAGES = [
   "あと少し！間違えた問題だけ動画で見直してみましょう",
   "いい感じです。もう一度動画を確認して満点を狙いましょう",
 ];
+const FAIL_MESSAGES = [
+  "もう一歩！動画をもう一度見てから再挑戦してみましょう",
+  "焦らなくて大丈夫。動画を見直してからもう一度チャレンジしましょう",
+];
 
 function initQuiz(config) {
   const questions = config.questions;
@@ -225,6 +233,16 @@ function initQuiz(config) {
     </div>
 
     <div id="profileBar" style="display:none;"></div>
+
+    <div id="videoConfirmScreen" style="display:none;">
+      <div class="mascot-big">${PAW_SVG}</div>
+      <div class="video-info" style="text-align:center;">
+        <div style="font-weight:700; font-size:16px; margin-bottom:8px;">${escapeHtml(config.video_title)}</div>
+        <a href="${escapeHtml(config.source_url)}" target="_blank" class="hub-link" style="display:inline-block; margin:4px 0 12px;">▶ 動画を見る</a>
+        <p style="margin:0;">この動画の内容を確認しましたか？</p>
+      </div>
+      <button class="btn-primary" id="confirmWatchedBtn">確認した</button>
+    </div>
 
     <div id="progressTrack" class="progress-track" style="display:none;"></div>
     <div id="quiz" style="display:none;"></div>
@@ -265,6 +283,7 @@ function initQuiz(config) {
 
   const nameScreen = document.getElementById('nameScreen');
   const profileBar = document.getElementById('profileBar');
+  const videoConfirmScreen = document.getElementById('videoConfirmScreen');
   const quizEl = document.getElementById('quiz');
   const progressTrack = document.getElementById('progressTrack');
   const submitBtnWrap = document.getElementById('submitBtnWrap');
@@ -294,7 +313,7 @@ function initQuiz(config) {
     userStore = savedProfile.store;
     nameScreen.style.display = 'none';
     showProfileBar();
-    beginQuiz();
+    showVideoConfirm();
   } else {
     document.getElementById('startBtn').onclick = () => {
       const nameVal = document.getElementById('nameInput').value.trim();
@@ -305,6 +324,17 @@ function initQuiz(config) {
       saveProfile(userName, userStore);
       nameScreen.style.display = 'none';
       showProfileBar();
+      showVideoConfirm();
+    };
+  }
+
+  // --- ①.5 クイズの前に「動画を確認しましたか？」を挟む ---
+  // 「確認した」を押した時点で、無言でAirtableに開始イベントを記録する（画面には何も表示しない）。
+  function showVideoConfirm() {
+    videoConfirmScreen.style.display = 'block';
+    document.getElementById('confirmWatchedBtn').onclick = () => {
+      videoConfirmScreen.style.display = 'none';
+      sendStartEvent(config, userName, userStore);
       beginQuiz();
     };
   }
@@ -415,12 +445,13 @@ function initQuiz(config) {
     });
 
     const isPerfect = score === questions.length;
+    const isPassed = (score / questions.length) >= PASS_THRESHOLD;
     document.getElementById('resultName').textContent = `${userName} さん`;
     document.getElementById('resultScore').textContent = `${score} / ${questions.length}`;
     document.getElementById('scoreCard').classList.toggle('perfect', isPerfect);
     document.getElementById('resultMsg').textContent = isPerfect
       ? pickRandom(PERFECT_MESSAGES)
-      : pickRandom(GOOD_MESSAGES);
+      : (isPassed ? pickRandom(GOOD_MESSAGES) : pickRandom(FAIL_MESSAGES));
 
     // ストリーク・ポイントを更新し、獲得ポイントを表示。ヘッダーのステータスバーも更新する。
     const stats = recordCompletion(score, questions.length);
@@ -442,8 +473,12 @@ function initQuiz(config) {
     resultScreen.style.display = 'block';
     window.scrollTo(0, 0);
 
-    markCleared(config.quiz_id || config.video_title);
-    sendResult(config, questions, selected, userName, userStore, score);
+    // 「合格」（正答率が合格ライン以上）の時だけ次のクイズを解放する。
+    // 「パーフェクト」（満点）は別枠の称号として記録し、一覧ページで区別して表示する。
+    const quizId = config.quiz_id || config.video_title;
+    if (isPassed) markCleared(quizId);
+    if (isPerfect) markPerfect(quizId);
+    sendResult(config, questions, selected, userName, userStore, score, isPassed, isPerfect);
   };
 
   // --- ④ 苦手な問題だけの復習（Airtableへの再送信はしない、その場の練習用） ---
@@ -532,13 +567,50 @@ function isCleared(quizId) {
   }
 }
 
+// 「パーフェクト」（満点）の記録。進行の解放条件ではなく、称号としてクイズ一覧に星バッジを出すためだけに使う。
+function markPerfect(quizId) {
+  try {
+    localStorage.setItem(statsKey('quizPerfect:' + quizId), '1');
+  } catch (e) {}
+}
+
+function isPerfectCleared(quizId) {
+  try {
+    return localStorage.getItem(statsKey('quizPerfect:' + quizId)) === '1';
+  } catch (e) {
+    return false;
+  }
+}
+
 function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
+// --- 開始イベントの送信（離脱率算出用） ---
+// 「確認した」を押した時点で、無言でAirtableに1行記録する。正答数・正答率などはまだ空欄。
+function sendStartEvent(config, userName, userStore) {
+  const payload = {
+    合言葉: QUIZ_SHARED_SECRET,
+    送信ID: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+    受講者名: userName,
+    所属店舗: userStore,
+    動画タイトル: config.video_title,
+    受講日時: new Date().toISOString(),
+    ステータス: '開始',
+    正答数: '',
+    総問題数: config.questions.length,
+    正答率: '',
+    合格判定: '',
+    満点フラグ: '',
+    回答詳細: ''
+  };
+  queuePending(payload);
+  postToWebhook(payload);
+}
+
 // --- 回答結果の送信（Airtable連携用） ---
 // 画面には状態を表示しない。送信の成否はブラウザの開発者ツール（コンソール）にのみ記録する。
-function sendResult(config, questions, selected, userName, userStore, score) {
+function sendResult(config, questions, selected, userName, userStore, score, isPassed, isPerfect) {
   const detailText = questions.map((item, qi) => {
     const isCorrect = selected[qi] === item.answer;
     return `Q${qi + 1}. ${item.q}\n`
@@ -553,8 +625,12 @@ function sendResult(config, questions, selected, userName, userStore, score) {
     所属店舗: userStore,
     動画タイトル: config.video_title,
     受講日時: new Date().toISOString(),
+    ステータス: '完了',
     正答数: score,
     総問題数: questions.length,
+    正答率: Math.round((score / questions.length) * 100),
+    合格判定: isPassed ? '合格' : 'もう少し！',
+    満点フラグ: isPerfect ? 'はい' : 'いいえ',
     回答詳細: detailText
   };
 
