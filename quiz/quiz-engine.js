@@ -237,11 +237,14 @@ function initQuiz(config) {
     <div id="videoConfirmScreen" style="display:none;">
       <div class="mascot-big">${PAW_SVG}</div>
       <div class="video-info" style="text-align:center;">
+        <div class="node-cat" style="margin-bottom:6px;">${escapeHtml(config.category || '')}</div>
         <div style="font-weight:700; font-size:16px; margin-bottom:8px;">${escapeHtml(config.video_title)}</div>
         <a href="${escapeHtml(config.source_url)}" target="_blank" class="hub-link" style="display:inline-block; margin:4px 0 12px;">▶ 動画を見る</a>
         <p style="margin:0;">この動画の内容を確認しましたか？</p>
       </div>
-      <button class="btn-primary" id="confirmWatchedBtn">確認した</button>
+      <div style="text-align:center; margin-top:16px;">
+        <button class="btn-primary" id="confirmWatchedBtn" style="padding:12px 22px; font-size:15px;">確認した</button>
+      </div>
     </div>
 
     <div id="progressTrack" class="progress-track" style="display:none;"></div>
