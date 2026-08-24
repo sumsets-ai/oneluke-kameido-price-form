@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>研修クイズ一覧｜ワンルーク亀戸店</title>
+<title>研修クイズ一覧</title>
 <link rel="stylesheet" href="quiz-style.css">
 </head>
 <body>
@@ -24,7 +24,6 @@
   </div>
   <h1>研修クイズ</h1>
 </div>
-<div class="sub">ワンルーク亀戸店</div>
 
 <div class="trail-intro">
   <div class="mascot-big">
@@ -153,6 +152,16 @@ QUIZZES.forEach((quiz, i) => {
     stamp.className = 'clear-stamp';
     stamp.textContent = 'Clear!';
     a.appendChild(stamp);
+  }
+
+  // 満点（パーフェクト）は合格とは別枠の称号。星バッジだけ付ける（進行の解放条件ではない）
+  // クリアスタンプと同じくlocked判定は見ない（実際の運用では、パーフェクトを取れた時点で
+  // そのクイズは既に解放済みのはずなので、lockedとperfectが同時にtrueになることはない）
+  if (isPerfectCleared(quizId)) {
+    const perfectBadge = document.createElement('div');
+    perfectBadge.className = 'perfect-badge';
+    perfectBadge.textContent = '⭐';
+    a.appendChild(perfectBadge);
   }
 
   // このカテゴリの「直前のクイズはクリア済みか」を次のループのために更新
