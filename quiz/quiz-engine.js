@@ -1,6 +1,8 @@
 /**
- * 研修クイズ 共通エンジン ver004
+ * 研修クイズ 共通エンジン ver005
  * （2026-08-25：段階的な合格ライン・パーフェクト称号・動画確認ゲート・離脱率記録を追加）
+ * （2026-08-27：動画確認ゲートに動画サムネイル画像を追加。config.thumbnailが未指定の場合は
+ *   従来通り肉球マスコットを表示する（画像がまだ用意できていないクイズでも壊れない））
  *
  * 使い方（各クイズHTML側）:
  *   <div id="app"></div>
@@ -235,7 +237,9 @@ function initQuiz(config) {
     <div id="profileBar" style="display:none;"></div>
 
     <div id="videoConfirmScreen" style="display:none;">
-      <div class="mascot-big">${PAW_SVG}</div>
+      ${config.thumbnail
+        ? `<img class="video-thumb" src="${escapeHtml(config.thumbnail)}" alt="${escapeHtml(config.video_title)}">`
+        : `<div class="mascot-big">${PAW_SVG}</div>`}
       <div class="video-info" style="text-align:center;">
         <div class="node-cat" style="margin-bottom:6px;">${escapeHtml(config.category || '')}</div>
         <div style="font-weight:700; font-size:16px; margin-bottom:8px;">${escapeHtml(config.video_title)}</div>
