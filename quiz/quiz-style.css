@@ -52,6 +52,10 @@ body {
   color: var(--ink);
   line-height: 1.65;
   font-size: 16px;
+  /* .status-barが100vw+負のmarginで画面幅いっぱいに広がる仕組みのため、
+     スクロールバー分だけ100vwが実際の表示幅より広くなるOS（Windows等）で
+     横スクロールが出てしまう。ここで確実に抑える */
+  overflow-x: hidden;
 }
 
 h1, .display {
@@ -221,6 +225,13 @@ h1, .display {
 }
 #nameScreen .mascot-big { width: 84px; height: 84px; margin: 0 auto 14px; }
 #videoConfirmScreen .mascot-big { width: 56px; height: 56px; margin: 0 auto 12px; }
+/* 「▶ 動画を見る」リンクだけオレンジ色＋下線で目立たせる（他ページのhub-linkには影響させない） */
+#videoConfirmScreen .hub-link {
+  color: var(--orange-deep);
+  text-decoration: underline;
+  font-size: 14.5px;
+}
+#videoConfirmScreen .hub-link:hover { color: var(--orange); }
 #nameScreen p {
   font-family: "Fredoka", sans-serif;
   font-weight: 600;
