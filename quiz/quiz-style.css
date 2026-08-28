@@ -213,6 +213,9 @@ h1, .display {
 }
 .progress-dot.done { background: var(--orange); }
 .progress-dot.current { background: var(--tiffany); }
+/* 動画確認ステップ用の1コマ目：問題に答えて進む色（オレンジ）とは別扱いだと分かるよう、
+   常にブランドカラー（ティファニーブルー）で固定表示する（エンダウド・プログレス効果） */
+.progress-dot--start { background: var(--brand-tiffany); }
 
 /* ---- 名前入力画面 ---- */
 #nameScreen {
