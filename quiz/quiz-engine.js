@@ -862,8 +862,11 @@ async function fetchCloudHistory(name, store) {
   if (!AIRTABLE_READONLY_TOKEN) {
     throw new Error('AIRTABLE_READONLY_TOKEN が未設定です（quiz-engine.js側の設定漏れ）');
   }
-  const formula = `AND({受講者名}="${escapeAirtableFormula(name)}", {所属店舗}="${escapeAirtableFormula(store)}", {ステータス}="完了")`;
-  const fields = ['動画タイトル', 'クイズID', '受講日時', '正答率', '合格判定', '満点フラグ'];
+  // 「ステータス＝完了」だけで絞ると、この項目が追加される前に完了した記録（正答数は入っているが
+  // ステータスは空欄のもの）が復元できなくなる。正答数が入っていれば「完了扱い」とみなすことで、
+  // 過去の実績も拾えるようにする（「開始」イベントには正答数が入らないので誤って混ざる心配はない）。
+  const formula = `AND({受講者名}="${escapeAirtableFormula(name)}", {所属店舗}="${escapeAirtableFormula(store)}", OR({ステータス}="完了", {正答数}!=""))`;
+  const fields = ['動画タイトル', 'クイズID', '受講日時', '正答数', '総問題数', '正答率', '合格判定', '満点フラグ'];
 
   let allFields = [];
   let offset;
@@ -908,8 +911,15 @@ function applyRestoredHistory(records) {
   const localDates = getActivityDates();
   const dates = [...new Set([...localDates, ...cloudDates])].sort();
 
+  // 満点フラグが空欄の古い記録は、正答数と総問題数から満点かどうかを推測する
+  // （この項目が追加される前の記録を「常に満点ではない」と決めつけて損させないため）
+  function wasPerfect(r) {
+    if (r['満点フラグ'] === 'はい') return true;
+    if (r['満点フラグ'] === 'いいえ') return false;
+    return r['正答数'] != null && r['総問題数'] != null && r['正答数'] === r['総問題数'];
+  }
   let cloudXp = 0;
-  records.forEach(r => { cloudXp += (r['満点フラグ'] === 'はい') ? 20 : 10; });
+  records.forEach(r => { cloudXp += wasPerfect(r) ? 20 : 10; });
   // 「大きい方を採用」だと、ローカル・クラウド双方に別々の受講記録がある場合に
   // 片方の分が失われる。そのため、まだAirtableに届いていない（＝再送キューに残っている）
   // 分だけをクラウドの合計に足し込む方式にする。再送キューにある時点でクラウドには
@@ -933,11 +943,18 @@ function applyRestoredHistory(records) {
     }
   } catch (e) {}
 
+  // 合格判定が空欄の古い記録は、正答数と総問題数から合格ラインを満たしているか推測する
+  function wasPassed(r) {
+    if (r['合格判定'] === '合格') return true;
+    if (r['合格判定'] === 'もう少し！') return false;
+    return r['正答数'] != null && r['総問題数'] > 0 && (r['正答数'] / r['総問題数']) >= PASS_THRESHOLD;
+  }
+
   records.forEach(r => {
     const qid = r['クイズID'];
-    if (!qid) return; // クイズID未記録の古いデータはここでは復元しない
-    if (r['合格判定'] === '合格') markCleared(qid);
-    if (r['満点フラグ'] === 'はい') markPerfect(qid);
+    if (!qid) return; // クイズID未記録の古いデータはここでは復元しない（動画タイトルからの推測はしない）
+    if (wasPassed(r)) markCleared(qid);
+    if (wasPerfect(r)) markPerfect(qid);
   });
 }
 
