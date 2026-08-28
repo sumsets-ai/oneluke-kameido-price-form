@@ -50,6 +50,30 @@ const AIRTABLE_TABLE_NAME = "研修クイズ受講記録";
 // 回避するためだけの処置。トークン自体の性質（読み取り専用・対象Baseのみ）は変わらない。
 const AIRTABLE_READONLY_TOKEN = atob("cGF0VGFyRnBEV0dUMkdNZHEuMTU4ZWVkMzJiNWM2YTdiNDY4NWQ1ZDg5MWFhMjM1YjZlZTc5YmJmMDdkY2Q0YzA4NTNiYTkxYmFkOTA5OGU5Zg==");
 
+// ============================================================
+// 店舗・スタッフのマスタ（表記ゆれ防止のため、店舗名・氏名は自由入力ではなく選択式にする）
+// 「ワンルーク亀戸店」「ワンルーク江東区亀戸店」のような表記ゆれがあると、連続記録・pt・
+// クイズのクリア状況が店舗名＋氏名の組み合わせをキーにしているため、同一人物なのに
+// 別データとして分裂してしまう。選択式にすることで表記ゆれの余地自体をなくす。
+//
+// 店舗が増えたら、STORE_OPTIONSに店舗名を追加し、STAFF_BY_STOREにその店舗のスタッフ配列を
+// 追加するだけでよい（他店舗の運用に影響しない）。スタッフの入れ替わりは、該当店舗の配列を
+// 直接編集する（増員・退職のたびにここを更新する）。
+// リストにまだ載っていない人（入社直後など）向けに「その他（手入力）」も選べるようにしてある。
+// ============================================================
+const STORE_OPTIONS = ["ワンルーク江東区亀戸店"];
+const STAFF_BY_STORE = {
+  "ワンルーク江東区亀戸店": [
+    "大堀 咲紀",
+    "佐藤 佳子",
+    "山木 莉李花",
+    "太田 圭音",
+    "松本 心菜",
+    "松本雄",
+  ],
+};
+const OTHER_NAME_OPTION = "その他（手入力）";
+
 // 合格ライン（この割合以上の正答率で「合格」＝次のクイズが解放される。100%は別途「パーフェクト」称号）
 const PASS_THRESHOLD = 0.7;
 
@@ -308,9 +332,10 @@ function initQuiz(config) {
       <div class="mascot-big">${PAW_SVG}</div>
       <p>最初に登録しましょう（次回から入力不要になります）</p>
       <label class="field-label" for="storeInput">所属店舗名</label>
-      <input type="text" id="storeInput" placeholder="例：ワンルーク亀戸店">
-      <label class="field-label" for="nameInput">お名前（フルネーム）</label>
-      <input type="text" id="nameInput" placeholder="例：山田 太郎">
+      <select id="storeInput"></select>
+      <label class="field-label" for="nameSelect">お名前</label>
+      <select id="nameSelect"></select>
+      <input type="text" id="nameOtherInput" placeholder="お名前（フルネーム）" style="display:none;">
       <button class="btn-primary" id="startBtn">クイズをはじめる</button>
       <p class="alt-action">アカウントがある方は <button class="link-btn" id="restoreBtn">こちら</button></p>
       <div id="restoreStatus" style="display:none;"></div>
@@ -382,6 +407,8 @@ function initQuiz(config) {
   const reviewScreen = document.getElementById('reviewScreen');
   let userStore = "";
 
+  populateStoreAndNameSelects();
+
   // --- 進捗バーの初期描画 ---
   // エンダウド・プログレス効果：動画確認を終えた時点で、進捗バーの1コマ目を最初から達成済みにしておく。
   // 実際に動画確認という1ステップを完了しているので誇張ではない（「もう1つ終わっている」実感を持たせる）。
@@ -416,10 +443,10 @@ function initQuiz(config) {
     showVideoConfirm();
   } else {
     document.getElementById('startBtn').onclick = () => {
-      const nameVal = document.getElementById('nameInput').value.trim();
-      const storeVal = document.getElementById('storeInput').value.trim();
+      const nameVal = getSelectedName();
+      const storeVal = getSelectedStore();
       if (!nameVal) { alert('お名前を入力してください'); return; }
-      if (!storeVal) { alert('所属店舗名を入力してください'); return; }
+      if (!storeVal) { alert('所属店舗名を選択してください'); return; }
       userName = nameVal;
       userStore = storeVal;
       saveProfile(userName, userStore);
@@ -434,10 +461,10 @@ function initQuiz(config) {
 
     // --- クロスデバイス引き継ぎ：「別の端末で登録済みの方はこちら」 ---
     document.getElementById('restoreBtn').onclick = async () => {
-      const nameVal = document.getElementById('nameInput').value.trim();
-      const storeVal = document.getElementById('storeInput').value.trim();
+      const nameVal = getSelectedName();
+      const storeVal = getSelectedStore();
       if (!nameVal) { alert('お名前を入力してください'); return; }
-      if (!storeVal) { alert('所属店舗名を入力してください'); return; }
+      if (!storeVal) { alert('所属店舗名を選択してください'); return; }
 
       const statusEl = document.getElementById('restoreStatus');
       const restoreBtn = document.getElementById('restoreBtn');
@@ -999,4 +1026,44 @@ function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str == null ? '' : str;
   return div.innerHTML;
+}
+
+// ============================================================
+// 店舗・氏名の選択欄（表記ゆれ防止のため自由入力ではなく選択式にしている）
+// ============================================================
+
+// 店舗の選択肢を描画し、選んだ店舗に応じて氏名の選択肢を出し分ける（店舗が増えても自動対応）
+function populateStoreAndNameSelects() {
+  const storeSelect = document.getElementById('storeInput');
+  if (!storeSelect) return;
+  storeSelect.innerHTML = STORE_OPTIONS.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  populateNameSelect(storeSelect.value);
+  storeSelect.onchange = () => populateNameSelect(storeSelect.value);
+}
+
+function populateNameSelect(store) {
+  const nameSelect = document.getElementById('nameSelect');
+  const otherInput = document.getElementById('nameOtherInput');
+  if (!nameSelect || !otherInput) return;
+  const staff = STAFF_BY_STORE[store] || [];
+  nameSelect.innerHTML = staff.map(n => `<option value="${escapeHtml(n)}">${escapeHtml(n)}</option>`).join('')
+    + `<option value="${escapeHtml(OTHER_NAME_OPTION)}">${escapeHtml(OTHER_NAME_OPTION)}</option>`;
+  nameSelect.onchange = () => {
+    otherInput.style.display = nameSelect.value === OTHER_NAME_OPTION ? 'block' : 'none';
+  };
+  otherInput.style.display = 'none';
+  otherInput.value = '';
+}
+
+// 「その他（手入力）」が選ばれていればその自由入力欄の値を、そうでなければ選択された氏名を返す
+function getSelectedName() {
+  const nameSelect = document.getElementById('nameSelect');
+  const otherInput = document.getElementById('nameOtherInput');
+  if (!nameSelect) return '';
+  if (nameSelect.value === OTHER_NAME_OPTION) return (otherInput ? otherInput.value : '').trim();
+  return nameSelect.value;
+}
+function getSelectedStore() {
+  const storeSelect = document.getElementById('storeInput');
+  return storeSelect ? storeSelect.value : '';
 }
