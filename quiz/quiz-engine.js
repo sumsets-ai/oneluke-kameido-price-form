@@ -318,8 +318,9 @@ function initQuiz(config) {
   // --- 進捗バーの初期描画 ---
   // エンダウド・プログレス効果：動画確認を終えた時点で、進捗バーの1コマ目を最初から達成済みにしておく。
   // 実際に動画確認という1ステップを完了しているので誇張ではない（「もう1つ終わっている」実感を持たせる）。
+  // 問題に答えて進む色（オレンジ）と混同しないよう、専用クラスで常に別の色（ブランドカラー）にする。
   const startDot = document.createElement('div');
-  startDot.className = 'progress-dot done';
+  startDot.className = 'progress-dot progress-dot--start';
   progressTrack.appendChild(startDot);
 
   questions.forEach(() => {
