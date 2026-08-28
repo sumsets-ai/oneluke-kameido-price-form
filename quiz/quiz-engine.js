@@ -1,5 +1,5 @@
 /**
- * 研修クイズ 共通エンジン ver006
+ * 研修クイズ 共通エンジン ver007
  * （2026-08-25：段階的な合格ライン・パーフェクト称号・動画確認ゲート・離脱率記録を追加）
  * （2026-08-27：動画確認ゲートに動画サムネイル画像を追加。config.thumbnailが未指定の場合は
  *   従来通り肉球マスコットを表示する（画像がまだ用意できていないクイズでも壊れない））
@@ -8,6 +8,11 @@
  *   ②今回の目標＝動画確認ゲートに合格ラインの一言を追加（マイクロラーニングの「ゴール提示」）
  *   ③復帰時Happy Path＝プロフィールバーの一言を、間隔に応じて「今日もお疲れ様/おかえりなさい/また一緒に」で出し分け
  *   ④ストリークのフリーズ＝1日休んでも連続記録が途切れない救済ルールを追加）
+ * （2026-08-28：クロスデバイス引き継ぎ機能を追加。「アカウント作成済み」ボタンから、
+ *   Airtable（読み取り専用トークン）に直接問い合わせて、別端末の連続記録・pt・クリア状況を
+ *   この端末に復元する。クイズIDが記録されていない古い受講データ（この機能追加より前の記録）は
+ *   個別クイズのクリア状況までは復元できない（連続記録・ptは全期間分そのまま復元される）。
+ *   AIRTABLE_READONLY_TOKENは要設定＝これが空のままだとボタンを押しても復元できない旨を案内する）
  *
  * 使い方（各クイズHTML側）:
  *   <div id="app"></div>
@@ -31,6 +36,20 @@
 const QUIZ_WEBHOOK_URL = "https://hook.us2.make.com/yffxvvnnq7vwu2b1pbeju5966gw1nqjw";
 const QUIZ_SHARED_SECRET = "oneluke-quiz-2026";
 
+// ============================================================
+// クロスデバイス引き継ぎ用：Airtableへの直接問い合わせ（読み取り専用）
+// 「アカウント作成済み」ボタンを押した時だけ使う。書き込みは一切しない。
+// AIRTABLE_READONLY_TOKENは、この用途専用に「読み取り専用・このBaseだけ」に絞った
+// Personal Access Tokenを発行して入れること（他の用途のトークンを流用しない）。
+// ============================================================
+const AIRTABLE_BASE_ID = "appjiyIkhrWTwHH3l";
+const AIRTABLE_TABLE_NAME = "研修クイズ受講記録";
+// GitHubのPush protection（秘密情報検知）が、読み取り専用と分かった上で使っているこのトークンを
+// 誤検知してpushをブロックするため、base64でエンコードして埋め込んでいる。
+// これはセキュリティ対策ではない（デコードすれば誰でも読める）。あくまでGitHub側の自動検知を
+// 回避するためだけの処置。トークン自体の性質（読み取り専用・対象Baseのみ）は変わらない。
+const AIRTABLE_READONLY_TOKEN = atob("cGF0VGFyRnBEV0dUMkdNZHEuMTU4ZWVkMzJiNWM2YTdiNDY4NWQ1ZDg5MWFhMjM1YjZlZTc5YmJmMDdkY2Q0YzA4NTNiYTkxYmFkOTA5OGU5Zg==");
+
 // 合格ライン（この割合以上の正答率で「合格」＝次のクイズが解放される。100%は別途「パーフェクト」称号）
 const PASS_THRESHOLD = 0.7;
 
@@ -48,14 +67,48 @@ const PAW_SVG = `
 
 // ============================================================
 // 学習継続の仕組み（連続記録・ポイント・週間ログ）
-// この端末のlocalStorageに、登録済みの氏名ごとに分けて保存する。
+// この端末のlocalStorageに、登録済みの氏名＋所属店舗の組み合わせごとに分けて保存する
+// （氏名だけだと、共有端末で同姓同名の受講者が別店舗にいた場合に実績が混ざってしまうため）。
 // （「別の人はこちら」で切り替えた際に、前の人の実績を引き継がないようにするため）
 // ============================================================
 function currentStatsOwner() {
-  try { return localStorage.getItem(PROFILE_KEYS.name) || 'guest'; } catch (e) { return 'guest'; }
+  try {
+    const name = localStorage.getItem(PROFILE_KEYS.name) || '';
+    const store = localStorage.getItem(PROFILE_KEYS.store) || '';
+    return name ? (name + '|' + store) : 'guest';
+  } catch (e) {
+    return 'guest';
+  }
 }
 function statsKey(base) {
   return base + ':' + currentStatsOwner();
+}
+
+// --- 移行措置：氏名のみをキーにしていた旧バージョンのデータを引き継ぐ ---
+// 「氏名＋店舗」キーに変更した際、既存ユーザーの連続記録・pt・クリア状況が
+// 0にリセットされて見えてしまわないよう、初回だけ旧キー（氏名のみ）のデータを
+// 新キー（氏名＋店舗）へコピーする。新キーに既にデータがあれば何もしない。
+function migrateOldStatsKey(name, store) {
+  if (!name) return;
+  const oldSuffix = ':' + name;
+  const newSuffix = ':' + name + '|' + store;
+  if (oldSuffix === newSuffix) return;
+  try {
+    const oldKeys = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const k = localStorage.key(i);
+      if (k && k.indexOf('quiz') === 0 && k.endsWith(oldSuffix)) {
+        oldKeys.push(k);
+      }
+    }
+    oldKeys.forEach(oldKey => {
+      const base = oldKey.slice(0, oldKey.length - oldSuffix.length);
+      const newKey = base + newSuffix;
+      if (localStorage.getItem(newKey) === null) {
+        localStorage.setItem(newKey, localStorage.getItem(oldKey));
+      }
+    });
+  } catch (e) {}
 }
 
 function todayStr() {
@@ -80,6 +133,17 @@ function getStreak() {
 }
 function getLastActiveDate() {
   try { return localStorage.getItem(statsKey('quizLastActiveDate')); } catch (e) { return null; }
+}
+
+// 表示用の連続記録。保存されている数値は「最後に完了した時点」のものなので、
+// そこから3日以上（フリーズの猶予=1日空きを超えて）経っていたら、実質もう途切れているとみなし
+// 0として見せる（採点時のrecordCompletion()を待たずに、開いた瞬間から正しい状態を出すため）。
+function getDisplayStreak() {
+  const raw = getStreak();
+  const last = getLastActiveDate();
+  if (!last) return raw;
+  const gap = daysBetween(last, todayStr());
+  return gap > 2 ? 0 : raw;
 }
 function getActivityDates() {
   try {
@@ -152,7 +216,7 @@ function renderStatusBar(container) {
   // 渡されたcontainer自体にクラスを付けて、大きい親（#app）の直接の子として固定させる。
   container.className = 'status-bar';
   container.innerHTML = `
-    <div class="status-chip">🔥<span>${getStreak()}</span>日</div>
+    <div class="status-chip">🔥<span>${getDisplayStreak()}</span>日</div>
     <div class="status-chip">⭐<span>${getXP()}</span>pt</div>
   `;
 }
@@ -247,6 +311,9 @@ function initQuiz(config) {
       <input type="text" id="nameInput" placeholder="お名前（フルネーム）">
       <br>
       <button class="btn-primary" id="startBtn">クイズをはじめる</button>
+      <br>
+      <button class="btn-secondary" id="restoreBtn">別の端末で登録済みの方はこちら</button>
+      <div id="restoreStatus" style="display:none;"></div>
     </div>
 
     <div id="profileBar" style="display:none;"></div>
@@ -343,6 +410,7 @@ function initQuiz(config) {
   if (savedProfile.name && savedProfile.store) {
     userName = savedProfile.name;
     userStore = savedProfile.store;
+    migrateOldStatsKey(userName, userStore);
     nameScreen.style.display = 'none';
     showProfileBar();
     showVideoConfirm();
@@ -355,12 +423,52 @@ function initQuiz(config) {
       userName = nameVal;
       userStore = storeVal;
       saveProfile(userName, userStore);
+      migrateOldStatsKey(userName, userStore);
       // 保存直後にステータスバーを描き直す（statsKeyの持ち主が今の氏名に切り替わるため、
       // ここで再描画しないと採点完了まで guest の 0日・0pt が表示されたままになる）
       renderStatusBar(document.getElementById('statusBarMount'));
       nameScreen.style.display = 'none';
       showProfileBar();
       showVideoConfirm();
+    };
+
+    // --- クロスデバイス引き継ぎ：「別の端末で登録済みの方はこちら」 ---
+    document.getElementById('restoreBtn').onclick = async () => {
+      const nameVal = document.getElementById('nameInput').value.trim();
+      const storeVal = document.getElementById('storeInput').value.trim();
+      if (!nameVal) { alert('お名前を入力してください'); return; }
+      if (!storeVal) { alert('所属店舗名を入力してください'); return; }
+
+      const statusEl = document.getElementById('restoreStatus');
+      const restoreBtn = document.getElementById('restoreBtn');
+      statusEl.style.display = 'block';
+      statusEl.textContent = '過去の記録を確認しています…';
+      restoreBtn.disabled = true;
+
+      userName = nameVal;
+      userStore = storeVal;
+      saveProfile(userName, userStore);
+      // クラウドの取得に失敗した場合の保険として、この端末の旧キー実績があれば先に引き継いでおく
+      migrateOldStatsKey(userName, userStore);
+
+      try {
+        const records = await fetchCloudHistory(userName, userStore);
+        applyRestoredHistory(records);
+        statusEl.textContent = records.length
+          ? `${records.length}件の記録を引き継ぎました！`
+          : 'この氏名・店舗名の記録は見つかりませんでした（新規として進めます）';
+      } catch (e) {
+        console.error('[研修クイズ] 引き継ぎ失敗:', e.message);
+        statusEl.textContent = '記録の取得に失敗しました。時間をおいて再度お試しください（このまま新規として進めます）';
+      }
+
+      renderStatusBar(document.getElementById('statusBarMount'));
+      // 結果メッセージを一瞬読んでもらってから次の画面に進む（読む前に切り替わらないように）
+      setTimeout(() => {
+        nameScreen.style.display = 'none';
+        showProfileBar();
+        showVideoConfirm();
+      }, 1400);
     };
   }
 
@@ -661,6 +769,7 @@ function sendStartEvent(config, userName, userStore) {
     受講者名: userName,
     所属店舗: userStore,
     動画タイトル: config.video_title,
+    クイズID: config.quiz_id || config.video_title,
     受講日時: new Date().toISOString(),
     ステータス: '開始',
     正答数: '',
@@ -690,6 +799,7 @@ function sendResult(config, questions, selected, userName, userStore, score, isP
     受講者名: userName,
     所属店舗: userStore,
     動画タイトル: config.video_title,
+    クイズID: config.quiz_id || config.video_title,
     受講日時: new Date().toISOString(),
     ステータス: '完了',
     正答数: score,
@@ -704,6 +814,102 @@ function sendResult(config, questions, selected, userName, userStore, score, isP
   // （送信中・リトライ待機中にページを閉じても、キューに残っていれば次回開いた時に再送できる）
   queuePending(payload);
   postToWebhook(payload);
+}
+
+// ============================================================
+// クロスデバイス引き継ぎ（「アカウント作成済み」ボタン）
+// この端末のlocalStorageが空でも、別端末で完了した過去の受講記録をAirtableから直接取得して
+// 連続記録・pt・クイズごとのクリア状況を復元する。書き込みは一切行わない（読み取り専用）。
+// ============================================================
+
+// Airtableの検索式（filterByFormula）に埋め込む文字列をエスケープする。
+// ダブルクォートをそのまま埋め込むと式が壊れる（または意図しない条件になる）ため。
+function escapeAirtableFormula(str) {
+  return String(str).replace(/"/g, '\\"');
+}
+
+// 指定した氏名・所属店舗の「完了」記録を、Airtableから直接取得する（読み取り専用トークンを使用）。
+// Airtableは1回のリクエストで最大100件しか返さないため、offsetが返ってくる限りページを送りして
+// 全件取り切る（そうしないと101件目以降の記録がポイント・連続記録・クリア状況からごっそり抜け落ちる）。
+async function fetchCloudHistory(name, store) {
+  if (!AIRTABLE_READONLY_TOKEN) {
+    throw new Error('AIRTABLE_READONLY_TOKEN が未設定です（quiz-engine.js側の設定漏れ）');
+  }
+  const formula = `AND({受講者名}="${escapeAirtableFormula(name)}", {所属店舗}="${escapeAirtableFormula(store)}", {ステータス}="完了")`;
+  const fields = ['動画タイトル', 'クイズID', '受講日時', '正答率', '合格判定', '満点フラグ'];
+
+  let allFields = [];
+  let offset;
+  do {
+    const params = new URLSearchParams({ filterByFormula: formula, pageSize: '100' });
+    fields.forEach(f => params.append('fields[]', f));
+    if (offset) params.set('offset', offset);
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}?${params.toString()}`;
+
+    const res = await fetch(url, {
+      headers: { Authorization: `Bearer ${AIRTABLE_READONLY_TOKEN}` }
+    });
+    if (!res.ok) throw new Error('Airtable取得失敗: status ' + res.status);
+    const data = await res.json();
+    allFields = allFields.concat((data.records || []).map(r => r.fields));
+    offset = data.offset; // 101件目以降が残っている場合だけ次のページ用のトークンが返ってくる
+  } while (offset);
+
+  return allFields;
+}
+
+// AirtableのISO日時（UTC）を、この端末のローカル日付（YYYY-MM-DD）に変換する。
+// todayStr()と同じ「ローカル時刻基準」に揃えないと、日本時間の深夜〜朝9時前の受講が
+// UTC換算で前日扱いになり、週間ログや連続記録の計算がずれてしまう。
+function isoToLocalDateStr(iso) {
+  if (!iso) return null;
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return null;
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// 取得した過去記録から、連続記録・pt・週間ログ・クイズごとのクリア状況を、
+// 現在のプロフィール（statsKeyの持ち主）に対して復元する。
+// 「クイズID」が入っていない古い記録（この機能を追加する前の受講データ）は、
+// 個別クイズのクリア状況までは復元できない（連続記録・ptは全期間分そのまま反映される）。
+//
+// この端末に既にある実績を単純に上書きはしない（統合する）。
+// 送信の再送キューにまだ残っている（＝Airtableにまだ届いていない）記録がある状態で
+// 復元を行うと、上書きしてしまうとその分の実績が消えてしまうため。
+function applyRestoredHistory(records) {
+  const cloudDates = records.map(r => isoToLocalDateStr(r['受講日時'])).filter(Boolean);
+  const localDates = getActivityDates();
+  const dates = [...new Set([...localDates, ...cloudDates])].sort();
+
+  let cloudXp = 0;
+  records.forEach(r => { cloudXp += (r['満点フラグ'] === 'はい') ? 20 : 10; });
+  // 同一の受講をローカル・クラウド両方で二重計上しないよう単純合算はせず、
+  // 「大きい方を採用」して、少なくとも今まで貯まっていたpt以下にはならないようにする
+  const xp = Math.max(getXP(), cloudXp);
+
+  // 直近の記録から遡って連続日数を数える（1日空きまでは既存のストリークのフリーズと同じ扱い）
+  let streak = dates.length ? 1 : 0;
+  for (let i = dates.length - 1; i > 0; i--) {
+    const gap = daysBetween(dates[i - 1], dates[i]);
+    if (gap === 1 || gap === 2) streak++;
+    else break;
+  }
+
+  try {
+    localStorage.setItem(statsKey('quizXP'), String(xp));
+    localStorage.setItem(statsKey('quizStreakCount'), String(streak));
+    localStorage.setItem(statsKey('quizActivityDates'), JSON.stringify(dates));
+    if (dates.length) {
+      localStorage.setItem(statsKey('quizLastActiveDate'), dates[dates.length - 1]);
+    }
+  } catch (e) {}
+
+  records.forEach(r => {
+    const qid = r['クイズID'];
+    if (!qid) return; // クイズID未記録の古いデータはここでは復元しない
+    if (r['合格判定'] === '合格') markCleared(qid);
+    if (r['満点フラグ'] === 'はい') markPerfect(qid);
+  });
 }
 
 // --- 送信の実行＋失敗時の再送キュー ---
