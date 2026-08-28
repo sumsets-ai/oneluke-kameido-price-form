@@ -242,7 +242,8 @@ h1, .display {
   color: var(--tiffany-deep);
   margin: 0 0 16px;
 }
-#nameScreen input {
+#nameScreen input,
+#nameScreen select {
   width: 100%;
   box-sizing: border-box;
   padding: 13px 16px;
@@ -256,7 +257,18 @@ h1, .display {
   outline: none;
   transition: border-color 0.15s ease;
 }
-#nameScreen input:focus { border-color: var(--tiffany); }
+#nameScreen input:focus,
+#nameScreen select:focus { border-color: var(--tiffany); }
+/* select独自の見た目（矢印アイコン等）をinputと揃えるための最低限の上書き */
+#nameScreen select {
+  appearance: none;
+  -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2355696d' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 18px;
+  padding-right: 42px;
+}
 
 .btn-primary {
   background: var(--orange);
