@@ -218,7 +218,9 @@ const FAIL_MESSAGES = [
 ];
 
 function initQuiz(config) {
-  const questions = config.questions;
+  // 選択肢の並び順を毎回シャッフルする（正解の位置に偏りがあると、内容を覚えていなくても
+  // 「いつも2番目を選ぶ」で合格できてしまうため）。表示用の配列を作るだけで、元データは変えない。
+  const questions = config.questions.map(shuffleChoices);
   const selected = new Array(questions.length).fill(null);
   let userName = "";
 
@@ -334,8 +336,10 @@ function initQuiz(config) {
   }
 
   // --- ① 登録済みプロフィールがあれば、名前入力をスキップして直接クイズへ ---
+  // 氏名だけでなく店舗名も揃っている場合のみスキップする（店舗名必須化より前に登録した人が
+  // 店舗名空欄のまま永久にスキップされ続けるのを防ぐため）
   const savedProfile = getProfile();
-  if (savedProfile.name) {
+  if (savedProfile.name && savedProfile.store) {
     userName = savedProfile.name;
     userStore = savedProfile.store;
     nameScreen.style.display = 'none';
@@ -629,6 +633,22 @@ function isPerfectCleared(quizId) {
 
 function pickRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
+}
+
+// 選択肢の並び順をシャッフルする（正解が毎回同じ位置に来ないように）。
+// answerは「シャッフル後の配列の中で正解が何番目に来たか」に正しく付け替える。
+// 元のitem（config.questions内のオブジェクト）は書き換えず、新しいオブジェクトを返す。
+function shuffleChoices(item) {
+  const order = item.choices.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return {
+    ...item,
+    choices: order.map(i => item.choices[i]),
+    answer: order.indexOf(item.answer),
+  };
 }
 
 // --- 開始イベントの送信（離脱率算出用） ---
