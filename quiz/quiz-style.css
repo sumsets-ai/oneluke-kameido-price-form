@@ -280,6 +280,30 @@ h1, .display {
   cursor: not-allowed;
 }
 
+/* 副次アクション用（例：「別の端末で登録済みの方はこちら」）。主ボタンと競合しないよう控えめに */
+.btn-secondary {
+  display: inline-block;
+  background: transparent;
+  color: var(--tiffany-deep);
+  border: 2px solid var(--card-line);
+  border-radius: 14px;
+  padding: 11px 20px;
+  margin-top: 10px;
+  font-family: "Fredoka", sans-serif;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.12s ease, background 0.12s ease;
+}
+.btn-secondary:hover { border-color: var(--tiffany); background: var(--tiffany-tint); }
+.btn-secondary:disabled { color: var(--muted); cursor: not-allowed; }
+#restoreStatus {
+  display: none;
+  margin-top: 10px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
 /* ---- クイズ画面 ---- */
 .q {
   background: var(--card);
