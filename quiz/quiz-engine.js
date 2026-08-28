@@ -883,9 +883,11 @@ function applyRestoredHistory(records) {
 
   let cloudXp = 0;
   records.forEach(r => { cloudXp += (r['満点フラグ'] === 'はい') ? 20 : 10; });
-  // 同一の受講をローカル・クラウド両方で二重計上しないよう単純合算はせず、
-  // 「大きい方を採用」して、少なくとも今まで貯まっていたpt以下にはならないようにする
-  const xp = Math.max(getXP(), cloudXp);
+  // 「大きい方を採用」だと、ローカル・クラウド双方に別々の受講記録がある場合に
+  // 片方の分が失われる。そのため、まだAirtableに届いていない（＝再送キューに残っている）
+  // 分だけをクラウドの合計に足し込む方式にする。再送キューにある時点でクラウドには
+  // 含まれていないと分かっているので、二重計上にはならない。
+  const xp = cloudXp + pendingXpForCurrentOwner();
 
   // 直近の記録から遡って連続日数を数える（1日空きまでは既存のストリークのフリーズと同じ扱い）
   let streak = dates.length ? 1 : 0;
@@ -949,6 +951,21 @@ function readPendingList() {
   } catch (e) {
     return [];
   }
+}
+
+// 今のプロフィール（氏名・所属店舗）について、まだAirtableに届いていない「完了」記録の
+// pt合計を返す（クロスデバイス復元時、クラウドの合計に足し込むために使う）。
+// 再送キューに残っている＝まだクラウドに反映されていないことが確定しているので、
+// ここで足しても二重計上にはならない。
+function pendingXpForCurrentOwner() {
+  let name = '', store = '';
+  try {
+    name = localStorage.getItem(PROFILE_KEYS.name) || '';
+    store = localStorage.getItem(PROFILE_KEYS.store) || '';
+  } catch (e) {}
+  return readPendingList()
+    .filter(p => p && p.ステータス === '完了' && p.受講者名 === name && p.所属店舗 === store)
+    .reduce((sum, p) => sum + (p.満点フラグ === 'はい' ? 20 : 10), 0);
 }
 
 // 送信IDで重複を避けつつキューに積む（既にキューにある場合は上書き）
