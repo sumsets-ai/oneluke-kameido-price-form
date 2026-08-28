@@ -307,12 +307,12 @@ function initQuiz(config) {
     <div id="nameScreen">
       <div class="mascot-big">${PAW_SVG}</div>
       <p>最初に登録しましょう（次回から入力不要になります）</p>
-      <input type="text" id="storeInput" placeholder="所属店舗名（例：ワンルーク亀戸店）">
-      <input type="text" id="nameInput" placeholder="お名前（フルネーム）">
-      <br>
+      <label class="field-label" for="storeInput">所属店舗名</label>
+      <input type="text" id="storeInput" placeholder="例：ワンルーク亀戸店">
+      <label class="field-label" for="nameInput">お名前（フルネーム）</label>
+      <input type="text" id="nameInput" placeholder="例：山田 太郎">
       <button class="btn-primary" id="startBtn">クイズをはじめる</button>
-      <br>
-      <button class="btn-secondary" id="restoreBtn">別の端末で登録済みの方はこちら</button>
+      <p class="alt-action">アカウントがある方は <button class="link-btn" id="restoreBtn">こちら</button></p>
       <div id="restoreStatus" style="display:none;"></div>
     </div>
 
