@@ -1,8 +1,13 @@
 /**
- * 研修クイズ 共通エンジン ver005
+ * 研修クイズ 共通エンジン ver006
  * （2026-08-25：段階的な合格ライン・パーフェクト称号・動画確認ゲート・離脱率記録を追加）
  * （2026-08-27：動画確認ゲートに動画サムネイル画像を追加。config.thumbnailが未指定の場合は
  *   従来通り肉球マスコットを表示する（画像がまだ用意できていないクイズでも壊れない））
+ * （2026-08-28：Duolingo型の学習継続の仕組みを追加。
+ *   ①エンダウド・プログレス効果＝動画確認を終えた時点で進捗バーの1コマ目を最初から達成済み表示にする
+ *   ②今回の目標＝動画確認ゲートに合格ラインの一言を追加（マイクロラーニングの「ゴール提示」）
+ *   ③復帰時Happy Path＝プロフィールバーの一言を、間隔に応じて「今日もお疲れ様/おかえりなさい/また一緒に」で出し分け
+ *   ④ストリークのフリーズ＝1日休んでも連続記録が途切れない救済ルールを追加）
  *
  * 使い方（各クイズHTML側）:
  *   <div id="app"></div>
@@ -73,6 +78,9 @@ function addXP(amount) {
 function getStreak() {
   try { return parseInt(localStorage.getItem(statsKey('quizStreakCount')) || '0', 10) || 0; } catch (e) { return 0; }
 }
+function getLastActiveDate() {
+  try { return localStorage.getItem(statsKey('quizLastActiveDate')); } catch (e) { return null; }
+}
 function getActivityDates() {
   try {
     const parsed = JSON.parse(localStorage.getItem(statsKey('quizActivityDates')) || '[]');
@@ -90,9 +98,14 @@ function recordCompletion(score, total) {
   try { last = localStorage.getItem(statsKey('quizLastActiveDate')); } catch (e) {}
 
   let streak = getStreak();
+  const gap = last ? daysBetween(last, today) : null;
   if (last === today) {
     // 今日はもう記録済み（連続記録はそのまま）
-  } else if (last && daysBetween(last, today) === 1) {
+  } else if (gap === 1) {
+    streak += 1;
+  } else if (gap === 2) {
+    // ストリークのフリーズ（保険）：1日だけ休んでも連続記録は途切れない。
+    // お店の定休日・急な休みなどで毎回リセットされるとやる気を削ぐため、1日分だけ猶予を持たせる。
     streak += 1;
   } else {
     streak = 1;
@@ -245,6 +258,7 @@ function initQuiz(config) {
         <div style="font-weight:700; font-size:16px; margin-bottom:8px;">${escapeHtml(config.video_title)}</div>
         <a href="${escapeHtml(config.source_url)}" target="_blank" class="hub-link" style="display:inline-block; margin:4px 0 12px;">▶ 動画を見る</a>
         <p style="margin:0;">この動画の内容を確認しましたか？</p>
+        <div class="status-chip" style="display:inline-flex; margin-top:10px;">🎯 目標：${questions.length}問中${Math.ceil(questions.length * PASS_THRESHOLD)}問以上正解</div>
       </div>
       <div style="text-align:center; margin-top:16px;">
         <button class="btn-primary" id="confirmWatchedBtn" style="padding:12px 22px; font-size:15px;">確認した</button>
@@ -300,14 +314,20 @@ function initQuiz(config) {
   let userStore = "";
 
   // --- 進捗バーの初期描画 ---
+  // エンダウド・プログレス効果：動画確認を終えた時点で、進捗バーの1コマ目を最初から達成済みにしておく。
+  // 実際に動画確認という1ステップを完了しているので誇張ではない（「もう1つ終わっている」実感を持たせる）。
+  const startDot = document.createElement('div');
+  startDot.className = 'progress-dot done';
+  progressTrack.appendChild(startDot);
+
   questions.forEach(() => {
     const dot = document.createElement('div');
-    dot.className = 'progress-dot';
+    dot.className = 'progress-dot progress-dot--q';
     progressTrack.appendChild(dot);
   });
 
   function updateProgress() {
-    const dots = progressTrack.querySelectorAll('.progress-dot');
+    const dots = progressTrack.querySelectorAll('.progress-dot--q');
     dots.forEach((dot, i) => {
       dot.classList.toggle('done', selected[i] !== null);
     });
@@ -326,9 +346,13 @@ function initQuiz(config) {
       const nameVal = document.getElementById('nameInput').value.trim();
       const storeVal = document.getElementById('storeInput').value.trim();
       if (!nameVal) { alert('お名前を入力してください'); return; }
+      if (!storeVal) { alert('所属店舗名を入力してください'); return; }
       userName = nameVal;
       userStore = storeVal;
       saveProfile(userName, userStore);
+      // 保存直後にステータスバーを描き直す（statsKeyの持ち主が今の氏名に切り替わるため、
+      // ここで再描画しないと採点完了まで guest の 0日・0pt が表示されたままになる）
+      renderStatusBar(document.getElementById('statusBarMount'));
       nameScreen.style.display = 'none';
       showProfileBar();
       showVideoConfirm();
@@ -346,11 +370,25 @@ function initQuiz(config) {
     };
   }
 
+  // 復帰時Happy Path：前回の挑戦からの間隔に応じて、あいさつの一言を出し分ける。
+  // 久しぶりの人に「サボってましたね」という空気を出さず、常に前向きな言葉で迎える。
+  function welcomeMessage() {
+    const streak = getStreak();
+    const last = getLastActiveDate();
+    const gap = last ? daysBetween(last, todayStr()) : null;
+    const name = escapeHtml(userName) + 'さん';
+    if (gap === null) return `${name}、はじめまして！`;
+    if (gap === 0) return `${name}、今日もお疲れ様です🔥${streak}日連続`;
+    if (gap === 1) return `${name}、おかえりなさい🔥${streak}日連続中`;
+    if (gap === 2) return `${name}、おかえりなさい！1日お休みでも記録は継続中です🔥${streak}日`;
+    return `${name}、おかえりなさい！また一緒に頑張りましょう`;
+  }
+
   function showProfileBar() {
     profileBar.style.display = 'block';
     profileBar.innerHTML = `
       <div class="video-info" style="display:flex; align-items:center; justify-content:space-between; gap:8px;">
-        <span>${escapeHtml(userName)}さんとして挑戦中${userStore ? '（' + escapeHtml(userStore) + '）' : ''}</span>
+        <span>${welcomeMessage()}${userStore ? '（' + escapeHtml(userStore) + '）' : ''}</span>
         <a href="#" id="switchUserLink" style="color:var(--tiffany-deep); font-weight:600; white-space:nowrap;">別の人はこちら</a>
       </div>
     `;
