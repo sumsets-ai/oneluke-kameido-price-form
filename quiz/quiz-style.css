@@ -280,23 +280,38 @@ h1, .display {
   cursor: not-allowed;
 }
 
-/* 副次アクション用（例：「別の端末で登録済みの方はこちら」）。主ボタンと競合しないよう控えめに */
-.btn-secondary {
-  display: inline-block;
-  background: transparent;
-  color: var(--tiffany-deep);
-  border: 2px solid var(--card-line);
-  border-radius: 14px;
-  padding: 11px 20px;
-  margin-top: 10px;
+/* 入力欄のラベル（プレースホルダーだけだと入力中に何の欄か消えてしまうため、常時表示のラベルを添える） */
+#nameScreen .field-label {
+  display: block;
+  text-align: left;
   font-family: "Fredoka", sans-serif;
-  font-size: 14px;
+  font-size: 12.5px;
   font-weight: 600;
-  cursor: pointer;
-  transition: border-color 0.12s ease, background 0.12s ease;
+  color: var(--ink-soft);
+  margin: 0 0 6px;
 }
-.btn-secondary:hover { border-color: var(--tiffany); background: var(--tiffany-tint); }
-.btn-secondary:disabled { color: var(--muted); cursor: not-allowed; }
+/* 「アカウントがある方はこちら」の一文。主要な案内文（#nameScreen p）とは別扱いで控えめに */
+#nameScreen .alt-action {
+  font-family: "Figtree", sans-serif;
+  font-weight: 400;
+  font-size: 13.5px;
+  color: var(--muted);
+  margin: 16px 0 0;
+}
+/* テキストリンク調のボタン（例：「アカウントがある方はこちら」）。主ボタンと競合しないよう控えめに */
+.link-btn {
+  background: none;
+  border: none;
+  padding: 0;
+  color: var(--tiffany-deep);
+  font-family: "Figtree", sans-serif;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+}
+.link-btn:hover { color: var(--tiffany); }
+.link-btn:disabled { color: var(--muted); cursor: not-allowed; text-decoration: none; }
 #restoreStatus {
   display: none;
   margin-top: 10px;
