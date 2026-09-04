@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>スタッフ登録</title>
+<link rel="stylesheet" href="quiz-style.css">
+</head>
+<body>
+
+<div id="app">
+  <div class="brand-row">
+    <div class="paw-mark" id="pawMount"></div>
+    <h1>スタッフ登録</h1>
+  </div>
+  <div id="statusArea">
+    <div id="nameScreen" style="text-align:center;">
+      <p>読み込み中…</p>
+    </div>
+  </div>
+</div>
+
+<!-- LINEのLIFF SDK（本人のLINE IDを自動取得するために使う） -->
+<script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+<!-- 店舗・スタッフのマスタ（STORE_OPTIONS / STAFF_BY_STORE）とPAW_SVG・escapeHtmlを使い回す -->
+<script src="quiz-engine.js"></script>
+<script>
+/**
+ * スタッフLINE連携 登録ページ ver001（2026-09-04）
+ *
+ * 目的：研修クイズの「未受講アラート」をLINEで個別送信できるようにするため、
+ * スタッフの氏名・所属店舗とLINEのユーザーIDを紐づけてAirtableに保存する。
+ *
+ * 使い方：LINE公式アカウントのリッチメニュー等から、このページ（LIFF経由）を開く。
+ * LINEアプリ内で開くと本人のLINE IDが自動取得できるので、スタッフは氏名・店舗を
+ * 選ぶだけでよい（LINE IDを自分で調べたり入力したりする必要は一切ない）。
+ *
+ * 送信先はquiz-engine.jsとは別の、この登録専用のMake Webhook
+ * （「研修クイズ受講記録」ではなく「スタッフLINE連携」テーブルに書き込む）。
+ * 同じ人が複数回登録した場合は、更新ではなく新しい行を追加する方式にしている
+ * （Make側のシナリオをシンプルに保つため）。あとで参照する側は「最新の登録日時」を
+ * 採用すればよい。
+ */
+
+const LIFF_ID = "2006699581-zO4hEWY8";
+// ↓ Make側のWebhookシナリオを作成したら、そのURLに置き換える
+const REGISTER_WEBHOOK_URL = "https://hook.us2.make.com/tp3bmwonihs49chh7gd7prclxgogv2ph";
+const REGISTER_SHARED_SECRET = "oneluke-staff-line-2026";
+
+const app = document.getElementById('nameScreen');
+document.getElementById('pawMount').innerHTML = PAW_SVG;
+
+function showMessage(html) {
+  app.innerHTML = `<div class="mascot-big">${PAW_SVG}</div>${html}`;
+}
+
+async function main() {
+  if (!REGISTER_WEBHOOK_URL) {
+    showMessage(`<p style="color:var(--red);">設定未完了：REGISTER_WEBHOOK_URLが未設定です（quiz-engine.js側ではなくこのファイル側の設定漏れ）。</p>`);
+    return;
+  }
+
+  showMessage(`<p>LINEと連携しています…</p>`);
+
+  try {
+    await liff.init({ liffId: LIFF_ID });
+  } catch (e) {
+    showMessage(`<p style="color:var(--red);">LIFFの初期化に失敗しました。LINEアプリ内でこのページを開き直してください。</p>`);
+    return;
+  }
+
+  if (!liff.isLoggedIn()) {
+    liff.login();
+    return; // ログイン画面に遷移する（戻ってきたらまたmain()が実行される）
+  }
+
+  let profile;
+  try {
+    profile = await liff.getProfile();
+  } catch (e) {
+    showMessage(`<p style="color:var(--red);">LINEのプロフィール取得に失敗しました。時間をおいて再度お試しください。</p>`);
+    return;
+  }
+
+  renderForm(profile.userId, profile.displayName);
+}
+
+function renderForm(lineUserId, displayName) {
+  app.innerHTML = `
+    <p>${escapeHtml(displayName)}さん、はじめまして！<br>研修クイズのリマインドをLINEで受け取るための登録です。</p>
+    <label class="field-label" for="storeInput">所属店舗名</label>
+    <select id="storeInput"></select>
+    <label class="field-label" for="nameSelect">お名前</label>
+    <select id="nameSelect"></select>
+    <input type="text" id="nameOtherInput" placeholder="お名前（フルネーム）" style="display:none;">
+    <button class="btn-primary" id="registerBtn">登録する</button>
+    <div id="registerStatus" style="margin-top:14px; font-size:13.5px; color:var(--ink-soft);"></div>
+  `;
+
+  populateStoreAndNameSelects();
+
+  document.getElementById('registerBtn').onclick = async () => {
+    const name = getSelectedName();
+    const store = getSelectedStore();
+    if (!name) { alert('お名前を選択（または入力）してください'); return; }
+    if (!store) { alert('所属店舗名を選択してください'); return; }
+
+    const btn = document.getElementById('registerBtn');
+    const statusEl = document.getElementById('registerStatus');
+    btn.disabled = true;
+    statusEl.textContent = '登録しています…';
+
+    const payload = {
+      合言葉: REGISTER_SHARED_SECRET,
+      氏名: name,
+      所属店舗: store,
+      LINE_UserID: lineUserId,
+      登録日時: new Date().toISOString(),
+    };
+
+    try {
+      const res = await fetch(REGISTER_WEBHOOK_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+      if (!res.ok) throw new Error('status ' + res.status);
+      statusEl.style.color = 'var(--tiffany-deep)';
+      statusEl.textContent = '登録できました！このLINEで研修のリマインドが届くようになります。';
+      btn.style.display = 'none';
+    } catch (e) {
+      console.error('[スタッフ登録] 送信失敗:', e.message);
+      statusEl.style.color = 'var(--red)';
+      statusEl.textContent = '登録に失敗しました。時間をおいてもう一度お試しください。';
+      btn.disabled = false;
+    }
+  };
+}
+
+main();
+</script>
+
+</body>
+</html>
