@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>研修クイズ 管理ダッシュボード</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Figtree:wght@400;500;600;700;800&display=swap">
+<style>
+  :root {
+    --ink: #263539;
+    --ink-soft: #55696d;
+    --muted: #92a5a8;
+    --paper: #f7fbfa;
+    --card: #ffffff;
+    --card-line: #e3edec;
+    --tiffany: #0abab5;
+    --tiffany-deep: #078f8b;
+    --tiffany-tint: #e3f7f5;
+    --orange: #f07830;
+    --orange-deep: #d9611c;
+    --orange-tint: #ffe6d2;
+    --green: #3fa34d;
+    --green-tint: #e2f5e0;
+    --red: #e0523f;
+    --red-tint: #fbe3de;
+    --shadow: 190 30% 25%;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Figtree", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+    max-width: 1080px;
+    margin: 0 auto;
+    padding: 24px 20px 80px;
+    background: var(--paper);
+    color: var(--ink);
+    line-height: 1.6;
+  }
+  h1, h2, .display {
+    font-family: "Fredoka", "Hiragino Kaku Gothic ProN", sans-serif;
+    font-weight: 600;
+  }
+  h1 { font-size: 22px; color: var(--tiffany-deep); margin: 0 0 4px; }
+  .subtitle { color: var(--muted); font-size: 13.5px; margin: 0 0 28px; }
+  h2 { font-size: 17px; color: var(--ink); margin: 0 0 4px; }
+  .section-desc { color: var(--ink-soft); font-size: 13px; margin: 0 0 14px; }
+  section { margin-bottom: 40px; }
+
+  /* ---- パスワードゲート ---- */
+  #gate {
+    max-width: 360px;
+    margin: 80px auto;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-radius: 20px;
+    padding: 32px 24px;
+    text-align: center;
+    box-shadow: 0 10px 30px -18px hsl(var(--shadow) / 0.3);
+  }
+  #gate p { font-weight: 600; margin: 0 0 16px; }
+  #gate input {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 12px 14px;
+    font-size: 16px;
+    border: 2px solid var(--card-line);
+    border-radius: 12px;
+    margin-bottom: 14px;
+    outline: none;
+  }
+  #gate input:focus { border-color: var(--tiffany); }
+  .btn {
+    background: var(--orange);
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    padding: 12px 22px;
+    font-family: "Fredoka", sans-serif;
+    font-weight: 600;
+    font-size: 15px;
+    cursor: pointer;
+  }
+  .btn:hover { background: var(--orange-deep); }
+  #gateError { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
+
+  /* ---- テーブル共通 ---- */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--card-line); border-radius: 16px; background: var(--card); }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
+  thead th {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--tiffany-tint);
+    color: var(--tiffany-deep);
+    font-family: "Fredoka", sans-serif;
+    font-weight: 600;
+    font-size: 12px;
+    letter-spacing: 0.03em;
+    position: sticky;
+    top: 0;
+  }
+  tbody td { padding: 10px 14px; border-top: 1px solid var(--card-line); font-variant-numeric: tabular-nums; }
+  tbody tr:hover { background: #fafdfd; }
+  .num { text-align: right; }
+  .pill {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-size: 11.5px;
+    font-weight: 700;
+    font-family: "Fredoka", sans-serif;
+  }
+  .pill-danger { background: var(--red-tint); color: var(--red); }
+  .pill-warn { background: var(--orange-tint); color: var(--orange-deep); }
+  .pill-ok { background: var(--green-tint); color: var(--green); }
+  .pill-muted { background: var(--card-line); color: var(--muted); }
+
+  #loading, #errorBox { text-align: center; padding: 60px 20px; color: var(--muted); }
+  #errorBox { color: var(--red); display: none; }
+  #content { display: none; }
+
+  .stat-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 28px; }
+  .stat-card {
+    flex: 1;
+    min-width: 140px;
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-radius: 14px;
+    padding: 14px 16px;
+  }
+  .stat-card .label { font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+  .stat-card .value { font-family: "Fredoka", sans-serif; font-size: 24px; font-weight: 700; color: var(--tiffany-deep); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<h1>🐾 研修クイズ 管理ダッシュボード</h1>
+<p class="subtitle">スタッフごとの受講状況・弱点分析（Airtableのデータをリアルタイムで表示）</p>
+
+<div id="gate">
+  <p>パスワードを入力してください</p>
+  <input type="password" id="gatePassword" placeholder="パスワード">
+  <button class="btn" id="gateBtn">開く</button>
+  <div id="gateError">パスワードが違います</div>
+</div>
+
+<div id="loading" style="display:none;">読み込み中…</div>
+<div id="errorBox"></div>
+
+<div id="content">
+
+  <div class="stat-row" id="statRow"></div>
+
+  <section>
+    <h2>👤 スタッフ別サマリー</h2>
+    <p class="section-desc">未受講の日数が長い人ほど上に表示されます</p>
+    <div class="table-wrap">
+      <table id="staffTable">
+        <thead>
+          <tr>
+            <th>氏名</th><th>店舗</th><th class="num">完了数</th><th class="num">平均正答率</th>
+            <th class="num">連続記録</th><th class="num">合計pt</th><th>最終受講</th><th>状態</th>
+          </tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <h2>⚠️ 弱点分析（設問別 不正解率）</h2>
+    <p class="section-desc">複数人が同じ問題を間違えているほど上に表示されます（2回以上の回答実績がある問題のみ集計）</p>
+    <div class="table-wrap">
+      <table id="weaknessTable">
+        <thead>
+          <tr><th>動画</th><th>設問</th><th class="num">回答数</th><th class="num">不正解数</th><th class="num">不正解率</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+</div>
+
+<!-- 店舗・スタッフのマスタとAirtable接続情報（STORE_OPTIONS / STAFF_BY_STORE / AIRTABLE_*）を使い回す -->
+<script src="quiz-engine.js"></script>
+<script>
+/**
+ * 研修クイズ 管理ダッシュボード ver001（2026-09-05）
+ * パスワードゲート＋Airtable直接読み込みで、スタッフ別の受講状況・弱点分析を表示する。
+ * 書き込みは一切行わない（読み取り専用）。
+ */
+
+// このダッシュボード専用の簡易パスワード（本格的な認証ではなく、社内向けの目隠し程度のもの）
+const DASHBOARD_PASSWORD = "oneluke-dash-2026";
+const UNLOCK_KEY = 'dashboardUnlocked';
+
+document.getElementById('gateBtn').onclick = tryUnlock;
+document.getElementById('gatePassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
+
+function tryUnlock() {
+  const val = document.getElementById('gatePassword').value;
+  if (val === DASHBOARD_PASSWORD) {
+    try { sessionStorage.setItem(UNLOCK_KEY, '1'); } catch (e) {}
+    document.getElementById('gate').style.display = 'none';
+    loadDashboard();
+  } else {
+    document.getElementById('gateError').style.display = 'block';
+  }
+}
+
+(function initGate() {
+  let unlocked = false;
+  try { unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1'; } catch (e) {}
+  if (unlocked) {
+    document.getElementById('gate').style.display = 'none';
+    loadDashboard();
+  }
+})();
+
+// --- Airtableから全件取得（100件ごとにページ送り） ---
+async function fetchAllRecords() {
+  const fields = ['受講者名', '所属店舗', '動画タイトル', 'クイズID', '受講日時', '正答数', '総問題数', '正答率', '合格判定', '満点フラグ', '回答詳細'];
+  let all = [];
+  let offset;
+  do {
+    const params = new URLSearchParams({ pageSize: '100' });
+    fields.forEach(f => params.append('fields[]', f));
+    if (offset) params.append('offset', offset);
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_TABLE_NAME)}?${params.toString()}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_READONLY_TOKEN}` } });
+    if (!res.ok) throw new Error('Airtable取得失敗: status ' + res.status);
+    const data = await res.json();
+    all = all.concat((data.records || []).map(r => r.fields));
+    offset = data.offset;
+  } while (offset);
+  return all;
+}
+
+// 「回答詳細」テキストを設問ごとに分解する。
+// 想定フォーマット：
+//   Q1. 質問文
+//   回答: 選んだ選択肢（正解 or 不正解）
+//   正解: 正しい選択肢
+// が空行区切りで並んでいる。
+function parseAnswerDetail(text) {
+  if (!text) return [];
+  return text.split(/\n\n+/).map(block => {
+    const lines = block.split('\n').filter(Boolean);
+    if (!lines.length) return null;
+    const qMatch = lines[0].match(/^Q\d+\.\s*(.+)$/);
+    const question = qMatch ? qMatch[1] : lines[0];
+    const ansLine = lines.find(l => l.indexOf('回答:') === 0) || '';
+    const isCorrect = ansLine.indexOf('（正解）') !== -1;
+    return { question, isCorrect };
+  }).filter(Boolean);
+}
+
+function buildStaffSummary(records) {
+  const groups = {};
+  records.forEach(r => {
+    const name = r['受講者名'] || '';
+    const store = r['所属店舗'] || '';
+    if (!name) return;
+    const key = name + '|' + store;
+    if (!groups[key]) groups[key] = { name, store, records: [] };
+    groups[key].records.push(r);
+  });
+
+  // 名簿にいる全員も、実績ゼロでも一覧に出す（「一度もやっていない人」を可視化するため）
+  STORE_OPTIONS.forEach(store => {
+    (STAFF_BY_STORE[store] || []).forEach(name => {
+      const key = name + '|' + store;
+      if (!groups[key]) groups[key] = { name, store, records: [] };
+    });
+  });
+
+  const today = todayStr();
+
+  return Object.values(groups).map(g => {
+    const recs = g.records;
+    const dates = [...new Set(recs.map(r => isoToLocalDateStr(r['受講日時'])).filter(Boolean))].sort();
+    const quizIds = new Set(recs.filter(r => r['クイズID']).map(r => r['クイズID']));
+
+    let rateSum = 0, rateCount = 0;
+    recs.forEach(r => {
+      if (r['正答数'] != null && r['総問題数']) { rateSum += r['正答数'] / r['総問題数']; rateCount++; }
+    });
+    const avgRate = rateCount ? Math.round((rateSum / rateCount) * 100) : null;
+
+    const lastDate = dates.length ? dates[dates.length - 1] : null;
+    const daysSince = lastDate ? daysBetween(lastDate, today) : null;
+
+    let xp = 0;
+    recs.forEach(r => { xp += (r['正答数'] != null && r['正答数'] === r['総問題数']) ? 20 : 10; });
+
+    let streak = dates.length ? 1 : 0;
+    for (let i = dates.length - 1; i > 0; i--) {
+      const gap = daysBetween(dates[i - 1], dates[i]);
+      if (gap === 1 || gap === 2) streak++;
+      else break;
+    }
+
+    return {
+      name: g.name, store: g.store,
+      completedCount: recs.length,
+      uniqueQuizCount: quizIds.size,
+      avgRate, lastDate, daysSince, xp, streak,
+    };
+  }).sort((a, b) => {
+    if (a.daysSince == null && b.daysSince == null) return a.name.localeCompare(b.name, 'ja');
+    if (a.daysSince == null) return -1;
+    if (b.daysSince == null) return 1;
+    return b.daysSince - a.daysSince;
+  });
+}
+
+function buildWeaknessAnalysis(records) {
+  const stats = {};
+  records.forEach(r => {
+    const items = parseAnswerDetail(r['回答詳細']);
+    items.forEach(item => {
+      const key = (r['動画タイトル'] || '') + '|' + item.question;
+      if (!stats[key]) stats[key] = { video: r['動画タイトル'] || '', question: item.question, total: 0, wrong: 0 };
+      stats[key].total++;
+      if (!item.isCorrect) stats[key].wrong++;
+    });
+  });
+  return Object.values(stats)
+    .map(s => ({ ...s, wrongRate: Math.round((s.wrong / s.total) * 100) }))
+    .filter(s => s.total >= 2)
+    .sort((a, b) => b.wrongRate - a.wrongRate || b.total - a.total);
+}
+
+function statusPill(daysSince) {
+  if (daysSince == null) return `<span class="pill pill-muted">未受講</span>`;
+  if (daysSince === 0) return `<span class="pill pill-ok">本日受講</span>`;
+  if (daysSince <= 3) return `<span class="pill pill-ok">${daysSince}日前</span>`;
+  if (daysSince <= 7) return `<span class="pill pill-warn">${daysSince}日前</span>`;
+  return `<span class="pill pill-danger">${daysSince}日前</span>`;
+}
+
+function renderStats(staffSummary, records) {
+  const totalStaff = staffSummary.length;
+  const neverDone = staffSummary.filter(s => s.daysSince == null).length;
+  const inactive7 = staffSummary.filter(s => s.daysSince != null && s.daysSince > 7).length;
+  const totalCompletions = records.length;
+
+  const stats = [
+    { label: '登録スタッフ数', value: totalStaff },
+    { label: '累計受講回数', value: totalCompletions },
+    { label: '一度も未受講', value: neverDone },
+    { label: '7日以上未受講', value: inactive7 },
+  ];
+  document.getElementById('statRow').innerHTML = stats.map(s => `
+    <div class="stat-card"><div class="label">${escapeHtml(s.label)}</div><div class="value">${s.value}</div></div>
+  `).join('');
+}
+
+function renderStaffTable(staffSummary) {
+  const tbody = document.querySelector('#staffTable tbody');
+  tbody.innerHTML = staffSummary.map(s => `
+    <tr>
+      <td>${escapeHtml(s.name)}</td>
+      <td>${escapeHtml(s.store)}</td>
+      <td class="num">${s.completedCount}</td>
+      <td class="num">${s.avgRate == null ? '—' : s.avgRate + '%'}</td>
+      <td class="num">🔥${s.streak}</td>
+      <td class="num">⭐${s.xp}</td>
+      <td>${s.lastDate || '—'}</td>
+      <td>${statusPill(s.daysSince)}</td>
+    </tr>
+  `).join('');
+}
+
+function renderWeaknessTable(weakness) {
+  const tbody = document.querySelector('#weaknessTable tbody');
+  if (!weakness.length) {
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; color:var(--muted);">まだ集計できるデータがありません</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = weakness.slice(0, 30).map(w => `
+    <tr>
+      <td>${escapeHtml(w.video)}</td>
+      <td>${escapeHtml(w.question)}</td>
+      <td class="num">${w.total}</td>
+      <td class="num">${w.wrong}</td>
+      <td class="num">${w.wrongRate >= 50 ? `<span class="pill pill-danger">${w.wrongRate}%</span>` : w.wrongRate >= 25 ? `<span class="pill pill-warn">${w.wrongRate}%</span>` : w.wrongRate + '%'}</td>
+    </tr>
+  `).join('');
+}
+
+async function loadDashboard() {
+  document.getElementById('loading').style.display = 'block';
+  document.getElementById('errorBox').style.display = 'none';
+  try {
+    const all = await fetchAllRecords();
+    const records = all.filter(r => r['正答数'] != null && r['総問題数'] > 0);
+
+    const staffSummary = buildStaffSummary(records);
+    const weakness = buildWeaknessAnalysis(records);
+
+    renderStats(staffSummary, records);
+    renderStaffTable(staffSummary);
+    renderWeaknessTable(weakness);
+
+    document.getElementById('loading').style.display = 'none';
+    document.getElementById('content').style.display = 'block';
+  } catch (e) {
+    console.error('[ダッシュボード] 読み込み失敗:', e);
+    document.getElementById('loading').style.display = 'none';
+    const box = document.getElementById('errorBox');
+    box.textContent = 'データの読み込みに失敗しました：' + e.message;
+    box.style.display = 'block';
+  }
+}
+</script>
+
+</body>
+</html>
