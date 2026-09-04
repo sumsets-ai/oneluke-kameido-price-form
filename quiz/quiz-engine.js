@@ -1,5 +1,9 @@
 /**
- * 研修クイズ 共通エンジン ver007
+ * 研修クイズ 共通エンジン ver008
+ * （2026-09-05：クイズの登録画面とLINE ID連携を一本化。専用ページを廃止し、LINE経由（LIFF）で
+ *   開かれた時だけ登録の裏側で無言でLINE IDを紐づける。通常ブラウザからのアクセス時は
+ *   影響なく通常通り動作する）
+ * （旧履歴）研修クイズ 共通エンジン ver007
  * （2026-08-25：段階的な合格ライン・パーフェクト称号・動画確認ゲート・離脱率記録を追加）
  * （2026-08-27：動画確認ゲートに動画サムネイル画像を追加。config.thumbnailが未指定の場合は
  *   従来通り肉球マスコットを表示する（画像がまだ用意できていないクイズでも壊れない））
@@ -73,6 +77,17 @@ const STAFF_BY_STORE = {
   ],
 };
 const OTHER_NAME_OPTION = "その他（手入力）";
+
+// ============================================================
+// LINE ID自動連携（未受講アラートの土台）
+// クイズの登録画面（店舗・氏名を選ぶところ）と、LINE ID紐づけを一本化している。
+// スタッフ側の操作は増やさない：LINE経由（LIFF）で開かれている時だけ、登録の裏側で
+// 無言でLINE IDも一緒に送信する。通常のブラウザ・ブックマークから開いた場合は
+// LIFFが使えないので、その回は何もせず静かにスキップする（エラー表示もしない）。
+// ============================================================
+const STAFF_LIFF_ID = "2006699581-zO4hEWY8";
+const STAFF_LINE_WEBHOOK_URL = "https://hook.us2.make.com/tp3bmwonihs49chh7gd7prclxgogv2ph";
+const STAFF_LINE_SHARED_SECRET = "oneluke-staff-line-2026";
 
 // 合格ライン（この割合以上の正答率で「合格」＝次のクイズが解放される。100%は別途「パーフェクト」称号）
 const PASS_THRESHOLD = 0.7;
@@ -438,6 +453,7 @@ function initQuiz(config) {
     userName = savedProfile.name;
     userStore = savedProfile.store;
     migrateOldStatsKey(userName, userStore);
+    tryLinkLineId(userName, userStore); // 無言・非同期。失敗しても画面には影響しない
     nameScreen.style.display = 'none';
     showProfileBar();
     showVideoConfirm();
@@ -451,6 +467,7 @@ function initQuiz(config) {
       userStore = storeVal;
       saveProfile(userName, userStore);
       migrateOldStatsKey(userName, userStore);
+      tryLinkLineId(userName, userStore); // 無言・非同期。失敗しても画面には影響しない
       // 保存直後にステータスバーを描き直す（statsKeyの持ち主が今の氏名に切り替わるため、
       // ここで再描画しないと採点完了まで guest の 0日・0pt が表示されたままになる）
       renderStatusBar(document.getElementById('statusBarMount'));
@@ -477,6 +494,7 @@ function initQuiz(config) {
       saveProfile(userName, userStore);
       // クラウドの取得に失敗した場合の保険として、この端末の旧キー実績があれば先に引き継いでおく
       migrateOldStatsKey(userName, userStore);
+      tryLinkLineId(userName, userStore); // 無言・非同期。失敗しても画面には影響しない
 
       try {
         const records = await fetchCloudHistory(userName, userStore);
@@ -848,6 +866,63 @@ function sendResult(config, questions, selected, userName, userStore, score, isP
 // この端末のlocalStorageが空でも、別端末で完了した過去の受講記録をAirtableから直接取得して
 // 連続記録・pt・クイズごとのクリア状況を復元する。書き込みは一切行わない（読み取り専用）。
 // ============================================================
+
+// ============================================================
+// LINE ID自動連携（登録の裏側で無言で行う。失敗しても画面には何も表示しない）
+// ============================================================
+function alreadyLineLinked() {
+  try { return localStorage.getItem(statsKey('lineLinked')) === '1'; } catch (e) { return false; }
+}
+function markLineLinked() {
+  try { localStorage.setItem(statsKey('lineLinked'), '1'); } catch (e) {}
+}
+
+// LIFF SDKを動的に読み込む（全クイズHTMLに<script>タグを追加せずに済むように、
+// このファイル側で必要な時だけ読み込む）。
+function loadLiffSdk() {
+  return new Promise((resolve, reject) => {
+    if (window.liff) { resolve(); return; }
+    const s = document.createElement('script');
+    s.src = 'https://static.line-scdn.net/liff/edge/2/sdk.js';
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('LIFF SDKの読み込みに失敗しました'));
+    document.head.appendChild(s);
+  });
+}
+
+// LINE経由（LIFF）で開かれている時だけ、無言でLINE IDを取得してAirtableに紐づける。
+// 通常のブラウザ・ブックマークから開いた場合はliff.isLoggedIn()がfalseになるので、
+// エラー扱いにせず静かに何もしない（コンソールに一言残すのみ）。
+async function tryLinkLineId(name, store) {
+  if (alreadyLineLinked()) return;
+  try {
+    await loadLiffSdk();
+    await liff.init({ liffId: STAFF_LIFF_ID });
+    if (!liff.isLoggedIn()) {
+      console.log('[LINE連携] LINE経由で開いていないためスキップします');
+      return;
+    }
+    const profile = await liff.getProfile();
+    const payload = {
+      合言葉: STAFF_LINE_SHARED_SECRET,
+      氏名: name,
+      所属店舗: store,
+      LINE_UserID: profile.userId,
+      登録日時: new Date().toISOString(),
+    };
+    const res = await fetch(STAFF_LINE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    if (res.ok) {
+      markLineLinked();
+      console.log('[LINE連携] 成功');
+    }
+  } catch (e) {
+    console.log('[LINE連携] スキップ（LINE経由で開いていない可能性）:', e.message);
+  }
+}
 
 // Airtableの検索式（filterByFormula）に埋め込む文字列をエスケープする。
 // ダブルクォートをそのまま埋め込むと式が壊れる（または意図しない条件になる）ため。
