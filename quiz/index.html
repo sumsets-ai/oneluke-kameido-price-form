@@ -102,76 +102,90 @@ const CATEGORY_CLASS = {
 };
 
 const trailEl = document.getElementById('trail');
-// カテゴリごとに「直前の1本をクリアするまで次は挑戦不可」にする（カテゴリをまたいだ順番待ちはしない）
-const lastClearedInCategory = {};
-QUIZZES.forEach((quiz, i) => {
-  const li = document.createElement('li');
-  li.className = 'trail-node ' + (i % 2 === 0 ? 'align-left' : 'align-right');
 
-  const a = document.createElement('a');
-  a.className = 'node-card';
+// 管理ダッシュボードからの手動解放を反映してから一覧を描画する。
+// syncManualUnlocks()はAirtableへの読み取り専用の問い合わせ（氏名未登録なら何もしない）。
+// 失敗しても静かに諦め、通常のロック判定だけで表示を続ける（quiz-engine.js側でハンドリング済み）。
+(async function renderTrail() {
+  await syncManualUnlocks();
 
-  const badge = document.createElement('div');
-  badge.className = 'node-badge ' + (CATEGORY_CLASS[quiz.category] || 'cat-inu');
-  badge.textContent = quiz.title.charAt(0);
+  // カテゴリごとに「直前の1本をクリアするまで次は挑戦不可」にする（カテゴリをまたいだ順番待ちはしない）
+  const lastClearedInCategory = {};
+  QUIZZES.forEach((quiz, i) => {
+    const li = document.createElement('li');
+    li.className = 'trail-node ' + (i % 2 === 0 ? 'align-left' : 'align-right');
 
-  const body = document.createElement('div');
-  body.className = 'node-body';
+    const a = document.createElement('a');
+    a.className = 'node-card';
 
-  // この端末で一度でもクリア済みなら、淡くグレーアウト＋Clearスタンプ（再挑戦は引き続き可能）
-  // 判定はファイル名（拡張子なし）で行う。クイズ側のquiz_idと必ず一致させること。
-  const quizId = quiz.file.replace(/\.html$/, '');
-  const cleared = isCleared(quizId);
-  const isFirstInCategory = !(quiz.category in lastClearedInCategory);
-  const locked = !isFirstInCategory && !lastClearedInCategory[quiz.category];
+    const badge = document.createElement('div');
+    badge.className = 'node-badge ' + (CATEGORY_CLASS[quiz.category] || 'cat-inu');
+    badge.textContent = quiz.title.charAt(0);
 
-  if (locked) {
-    a.classList.add('locked');
-    a.removeAttribute('href');
-    body.innerHTML = `
-      <div class="node-cat">${escapeHtml(quiz.category)}</div>
-      <div class="node-title">${escapeHtml(quiz.title)}</div>
-      <div class="lock-hint">前のクイズをクリアすると挑戦できます</div>
-    `;
-    const lockBadge = document.createElement('div');
-    lockBadge.className = 'lock-badge';
-    lockBadge.textContent = '🔒';
-    a.appendChild(lockBadge);
-  } else {
-    a.href = quiz.file;
-    body.innerHTML = `
-      <div class="node-cat">${escapeHtml(quiz.category)}</div>
-      <div class="node-title">${escapeHtml(quiz.title)}</div>
-      <div class="node-meta">全${quiz.count}問・約${Math.max(3, Math.round(quiz.count * 0.8))}分</div>
-    `;
-  }
+    const body = document.createElement('div');
+    body.className = 'node-body';
 
-  if (cleared) {
-    a.classList.add('cleared');
-    const stamp = document.createElement('div');
-    stamp.className = 'clear-stamp';
-    stamp.textContent = 'Clear!';
-    a.appendChild(stamp);
-  }
+    // この端末で一度でもクリア済みなら、淡くグレーアウト＋Clearスタンプ（再挑戦は引き続き可能）
+    // 判定はファイル名（拡張子なし）で行う。クイズ側のquiz_idと必ず一致させること。
+    const quizId = quiz.file.replace(/\.html$/, '');
+    const cleared = isCleared(quizId);
+    const isFirstInCategory = !(quiz.category in lastClearedInCategory);
+    const wouldBeLockedBySequence = !isFirstInCategory && !lastClearedInCategory[quiz.category];
+    const manuallyUnlocked = isManuallyUnlocked(quizId);
+    const locked = wouldBeLockedBySequence && !manuallyUnlocked;
 
-  // 満点（パーフェクト）は合格とは別枠の称号。星バッジだけ付ける（進行の解放条件ではない）
-  // クリアスタンプと同じくlocked判定は見ない（実際の運用では、パーフェクトを取れた時点で
-  // そのクイズは既に解放済みのはずなので、lockedとperfectが同時にtrueになることはない）
-  if (isPerfectCleared(quizId)) {
-    const perfectBadge = document.createElement('div');
-    perfectBadge.className = 'perfect-badge';
-    perfectBadge.textContent = '⭐';
-    a.appendChild(perfectBadge);
-  }
+    if (locked) {
+      a.classList.add('locked');
+      a.removeAttribute('href');
+      body.innerHTML = `
+        <div class="node-cat">${escapeHtml(quiz.category)}</div>
+        <div class="node-title">${escapeHtml(quiz.title)}</div>
+        <div class="lock-hint">前のクイズをクリアすると挑戦できます</div>
+      `;
+      const lockBadge = document.createElement('div');
+      lockBadge.className = 'lock-badge';
+      lockBadge.textContent = '🔒';
+      a.appendChild(lockBadge);
+    } else {
+      a.href = quiz.file;
+      // 本来は順番待ちだが、管理者が特別に解放してくれた場合はその旨を伝える
+      const metaLine = (wouldBeLockedBySequence && manuallyUnlocked)
+        ? `<div class="node-meta">🔓特別に解放されました・全${quiz.count}問</div>`
+        : `<div class="node-meta">全${quiz.count}問・約${Math.max(3, Math.round(quiz.count * 0.8))}分</div>`;
+      body.innerHTML = `
+        <div class="node-cat">${escapeHtml(quiz.category)}</div>
+        <div class="node-title">${escapeHtml(quiz.title)}</div>
+        ${metaLine}
+      `;
+    }
 
-  // このカテゴリの「直前のクイズはクリア済みか」を次のループのために更新
-  lastClearedInCategory[quiz.category] = cleared;
+    if (cleared) {
+      a.classList.add('cleared');
+      const stamp = document.createElement('div');
+      stamp.className = 'clear-stamp';
+      stamp.textContent = 'Clear!';
+      a.appendChild(stamp);
+    }
 
-  a.appendChild(badge);
-  a.appendChild(body);
-  li.appendChild(a);
-  trailEl.appendChild(li);
-});
+    // 満点（パーフェクト）は合格とは別枠の称号。星バッジだけ付ける（進行の解放条件ではない）
+    // クリアスタンプと同じくlocked判定は見ない（実際の運用では、パーフェクトを取れた時点で
+    // そのクイズは既に解放済みのはずなので、lockedとperfectが同時にtrueになることはない）
+    if (isPerfectCleared(quizId)) {
+      const perfectBadge = document.createElement('div');
+      perfectBadge.className = 'perfect-badge';
+      perfectBadge.textContent = '⭐';
+      a.appendChild(perfectBadge);
+    }
+
+    // このカテゴリの「直前のクイズはクリア済みか」を次のループのために更新
+    lastClearedInCategory[quiz.category] = cleared;
+
+    a.appendChild(badge);
+    a.appendChild(body);
+    li.appendChild(a);
+    trailEl.appendChild(li);
+  });
+})();
 
 function escapeHtml(str) {
   const div = document.createElement('div');
