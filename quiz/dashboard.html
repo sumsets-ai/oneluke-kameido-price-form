@@ -82,6 +82,29 @@
   .btn:hover { background: var(--orange-deep); }
   #gateError { color: var(--red); font-size: 13px; margin-top: 8px; display: none; }
 
+  /* ---- パスワード変更パネル ---- */
+  #pwPanel {
+    background: var(--card);
+    border: 1px solid var(--card-line);
+    border-radius: 16px;
+    padding: 18px 20px;
+    margin-bottom: 28px;
+  }
+  #pwPanel summary { cursor: pointer; font-weight: 600; font-size: 14px; color: var(--ink-soft); }
+  #pwPanel .pw-body { margin-top: 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  #pwPanel input {
+    padding: 10px 12px;
+    font-size: 14px;
+    border: 2px solid var(--card-line);
+    border-radius: 10px;
+    outline: none;
+    width: 220px;
+  }
+  #pwPanel input:focus { border-color: var(--tiffany); }
+  #pwMsg { font-size: 13px; margin-top: 10px; display: none; }
+  #pwMsg.ok { color: var(--green); }
+  #pwMsg.err { color: var(--red); }
+
   /* ---- テーブル共通 ---- */
   .table-wrap { overflow-x: auto; border: 1px solid var(--card-line); border-radius: 16px; background: var(--card); }
   table { width: 100%; border-collapse: collapse; font-size: 13.5px; white-space: nowrap; }
@@ -147,6 +170,16 @@
 
 <div id="content">
 
+  <details id="pwPanel">
+    <summary>⚙ ダッシュボードのパスワードを変更する</summary>
+    <div class="pw-body">
+      <input type="password" id="pwNew1" placeholder="新しいパスワード">
+      <input type="password" id="pwNew2" placeholder="新しいパスワード（確認）">
+      <button class="btn" id="pwSaveBtn">保存</button>
+    </div>
+    <div id="pwMsg"></div>
+  </details>
+
   <div class="stat-row" id="statRow"></div>
 
   <section>
@@ -184,21 +217,48 @@
 <script src="quiz-engine.js"></script>
 <script>
 /**
- * 研修クイズ 管理ダッシュボード ver001（2026-09-05）
+ * 研修クイズ 管理ダッシュボード ver002（2026-09-05）
  * パスワードゲート＋Airtable直接読み込みで、スタッフ別の受講状況・弱点分析を表示する。
- * 書き込みは一切行わない（読み取り専用）。
+ * 受講データの読み込みは読み取り専用。パスワードはAirtable「ダッシュボード設定」テーブルで管理し、
+ * オーナーがダッシュボード上の「パスワードを変更する」フォームから、コード変更なしで変更できる
+ * （フォーム送信はMake Webhook経由。書き込みはこの1レコードのみ）。
  */
 
-// このダッシュボード専用の簡易パスワード（本格的な認証ではなく、社内向けの目隠し程度のもの）
-const DASHBOARD_PASSWORD = "oneluke-dash-2026";
+// パスワード保護（本格的な認証ではなく、社内向けの目隠し程度のもの）
+const AIRTABLE_SETTINGS_TABLE_NAME = "ダッシュボード設定";
+const DEFAULT_DASHBOARD_PASSWORD = "oneluke-dash-2026"; // Airtable取得に失敗した時だけ使うフォールバック
 const UNLOCK_KEY = 'dashboardUnlocked';
+
+// パスワード変更フォームの送信先（Make: Webhook→Filter(合言葉)→Airtable Update a Record）
+const PW_CHANGE_WEBHOOK_URL = atob("aHR0cHM6Ly9ob29rLnVzMi5tYWtlLmNvbS9QTEFDRUhPTERFUl9QV19DSEFOR0VfV0VCSE9PSw==");
+const PW_CHANGE_SHARED_SECRET = "oneluke-dash-pwchange-2026";
+
+let currentPassword = DEFAULT_DASHBOARD_PASSWORD;
+
+async function fetchCurrentPassword() {
+  try {
+    const params = new URLSearchParams({ pageSize: '1' });
+    params.append('fields[]', '値');
+    params.append('filterByFormula', '{設定キー}="dashboard_password"');
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_SETTINGS_TABLE_NAME)}?${params.toString()}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_READONLY_TOKEN}` } });
+    if (!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    const rec = (data.records || [])[0];
+    if (rec && rec.fields && rec.fields['値']) return rec.fields['値'];
+    return DEFAULT_DASHBOARD_PASSWORD;
+  } catch (e) {
+    console.log('[パスワード取得] Airtableから取得できなかったため既定値を使用:', e.message);
+    return DEFAULT_DASHBOARD_PASSWORD;
+  }
+}
 
 document.getElementById('gateBtn').onclick = tryUnlock;
 document.getElementById('gatePassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
 
 function tryUnlock() {
   const val = document.getElementById('gatePassword').value;
-  if (val === DASHBOARD_PASSWORD) {
+  if (val === currentPassword) {
     try { sessionStorage.setItem(UNLOCK_KEY, '1'); } catch (e) {}
     document.getElementById('gate').style.display = 'none';
     loadDashboard();
@@ -207,7 +267,8 @@ function tryUnlock() {
   }
 }
 
-(function initGate() {
+(async function initGate() {
+  currentPassword = await fetchCurrentPassword();
   let unlocked = false;
   try { unlocked = sessionStorage.getItem(UNLOCK_KEY) === '1'; } catch (e) {}
   if (unlocked) {
@@ -215,6 +276,41 @@ function tryUnlock() {
     loadDashboard();
   }
 })();
+
+// --- パスワード変更フォーム ---
+function showPwMsg(text, ok) {
+  const box = document.getElementById('pwMsg');
+  box.textContent = text;
+  box.className = ok ? 'ok' : 'err';
+  box.style.display = 'block';
+}
+
+document.getElementById('pwSaveBtn').onclick = async () => {
+  const p1 = document.getElementById('pwNew1').value;
+  const p2 = document.getElementById('pwNew2').value;
+  if (p1.length < 4) { showPwMsg('4文字以上で入力してください', false); return; }
+  if (p1 !== p2) { showPwMsg('2つの入力が一致しません', false); return; }
+
+  const btn = document.getElementById('pwSaveBtn');
+  btn.disabled = true;
+  try {
+    const res = await fetch(PW_CHANGE_WEBHOOK_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 合言葉: PW_CHANGE_SHARED_SECRET, 新パスワード: p1 }),
+    });
+    if (!res.ok) throw new Error('送信失敗: status ' + res.status);
+    currentPassword = p1;
+    document.getElementById('pwNew1').value = '';
+    document.getElementById('pwNew2').value = '';
+    showPwMsg('変更しました。次回からこのパスワードでログインできます。', true);
+  } catch (e) {
+    console.error('[パスワード変更] 失敗:', e);
+    showPwMsg('変更に失敗しました。時間をおいて再度お試しください。', false);
+  } finally {
+    btn.disabled = false;
+  }
+};
 
 // --- Airtableから全件取得（100件ごとにページ送り） ---
 async function fetchAllRecords() {
