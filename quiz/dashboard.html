@@ -23,6 +23,9 @@
     --green-tint: #e2f5e0;
     --red: #e0523f;
     --red-tint: #fbe3de;
+    --purple: #8b6fc9;
+    --purple-deep: #6a4fae;
+    --purple-tint: #ece6f9;
     --shadow: 190 30% 25%;
   }
   * { box-sizing: border-box; }
@@ -167,6 +170,7 @@
 
   /* ---- 受講マトリクス ---- */
   #matrixTable th, #matrixTable td { white-space: nowrap; }
+  .mx-published { display: block; font-weight: 400; font-size: 10px; color: var(--muted); margin-top: 2px; }
   #matrixTable thead th { position: sticky; top: 0; z-index: 2; }
   #matrixTable .mx-name-col { position: sticky; left: 0; z-index: 3; background: var(--card); }
   #matrixTable thead .mx-name-col { z-index: 4; background: var(--tiffany-tint); }
@@ -176,10 +180,17 @@
   .mx-passed { background: var(--green-tint); color: var(--green); }
   .mx-failed { background: var(--red-tint); color: var(--red); }
   .mx-dropped { background: var(--orange-tint); color: var(--orange-deep); }
+  .mx-unlocked { background: var(--purple-tint); color: var(--purple-deep); }
   .mx-none { color: var(--muted); }
+  .mx-clickable { cursor: pointer; }
+  .mx-clickable:hover { outline: 2px solid var(--tiffany); outline-offset: -2px; }
   .mx-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); margin: 10px 2px 0; }
   .mx-legend span { display: inline-flex; align-items: center; gap: 5px; }
   .mx-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
+  .mx-cat-0 { background: var(--tiffany-tint); color: var(--tiffany-deep); }
+  .mx-cat-1 { background: var(--green-tint); color: var(--green); }
+  .mx-cat-2 { background: var(--orange-tint); color: var(--orange-deep); }
+  .mx-cat-3 { background: var(--purple-tint); color: var(--purple-deep); }
   .pill {
     display: inline-block;
     padding: 3px 10px;
@@ -269,8 +280,10 @@
       <span><i style="background:var(--green-tint)"></i>合格</span>
       <span><i style="background:var(--red-tint)"></i>不合格</span>
       <span><i style="background:var(--orange-tint)"></i>開始したが未完了</span>
+      <span><i style="background:var(--purple-tint)"></i>手動解放済み（未受講）</span>
       <span><i style="background:var(--card-line)"></i>未着手</span>
     </div>
+    <p class="section-desc" style="margin-top:8px;">「未着手」「手動解放済み」のセルはクリックで解放・取消ができます</p>
   </section>
 
   <section>
@@ -333,48 +346,62 @@
  * （フォーム送信はMake Webhook経由。書き込みはこの1レコードのみ）。
  */
 
-// パスワード保護（本格的な認証ではなく、社内向けの目隠し程度のもの）
+// パスワード保護（本格的な認証ではなく、社内向けの目隠し程度のもの）。
+// 注意：正しいパスワードはAirtable「ダッシュボード設定」テーブルだけが持つ。取得に失敗した時に
+// ソースコード上の固定値へフォールバックすると、パスワードを変更した後も、通信を意図的に
+// 遮断するだけで旧パスワードが永久に使えてしまう「消せない抜け道」になる。そのため、
+// 取得できなかった場合は既定値を使わず、ゲート自体を開けない（下のfetchCurrentPassword参照）。
 const AIRTABLE_SETTINGS_TABLE_NAME = "ダッシュボード設定";
-const DEFAULT_DASHBOARD_PASSWORD = "oneluke-dash-2026"; // Airtable取得に失敗した時だけ使うフォールバック
 const UNLOCK_KEY = 'dashboardUnlocked';
 
 // パスワード変更フォームの送信先（Make: Webhook→Filter(合言葉)→Airtable Update a Record）
-const PW_CHANGE_WEBHOOK_URL = atob("aHR0cHM6Ly9ob29rLnVzMi5tYWtlLmNvbS9QTEFDRUhPTERFUl9QV19DSEFOR0VfV0VCSE9PSw==");
+const PW_CHANGE_WEBHOOK_URL = atob("aHR0cHM6Ly9ob29rLnVzMi5tYWtlLmNvbS85YXo3NXNscmtjbGN0ejhuZ2ptaWZ6a3FydThmYWNqNQ==");
 const PW_CHANGE_SHARED_SECRET = "oneluke-dash-pwchange-2026";
 
-let currentPassword = DEFAULT_DASHBOARD_PASSWORD;
+// 手動解放（受講マトリクスからの解放・取消）の送信先。
+// Make: Webhook→Filter(合言葉)→Airtable Create a Record（テーブル「手動解放ログ」）
+// テーブル名（AIRTABLE_MANUAL_UNLOCK_TABLE_NAME）はquiz-engine.js側で定義済みのものをそのまま使う
+// （クイズ一覧.html側のfetchManualUnlocksと同じテーブルを見に行くため、二重定義を避けている）。
+const MANUAL_UNLOCK_WEBHOOK_URL = atob("aHR0cHM6Ly9ob29rLnVzMi5tYWtlLmNvbS92aXN2eG80enBic3U0a2s2eTN4b2hqOWZyNXJleDAxaA==");
+const MANUAL_UNLOCK_SHARED_SECRET = "oneluke-dash-unlock-2026";
+
+let currentPassword = null; // 取得できるまでは、いかなる入力も拒否する（下のtryUnlock参照）
 let allRecords = []; // スタッフ詳細モーダル用に、読み込んだ受講記録を保持しておく
 let allPairs = [];   // 「開始→完了」のペア（pairAttemptsの結果）。所要時間の計算用に保持
 let allOrphans = [];  // ペアにならなかった「開始」（＝離脱候補）。モーダルの離脱内訳用に保持
 let allRaw = [];      // Airtableから取得した生の全レコード（ステータス「開始」「完了」両方含む）
 let staffSummaryMap = {}; // name|store → buildStaffSummaryの1件。モーダルの上部統計用に保持
 
-// クイズのマスタ一覧（タイトル・カテゴリー）。クイズ一覧.html/deploy/index.htmlのQUIZZES配列と
-// 内容を一致させること（新しいクイズを追加した時は両方に反映する）。
-// quizIdは各クイズファイルのconfig.quiz_id（＝ファイル名から拡張子を除いたもの）と対応する。
+// クイズのマスタ一覧（タイトル・カテゴリー・公開日）。クイズ一覧.html/deploy/index.htmlのQUIZZES配列と
+// タイトル・カテゴリーの内容を一致させること（新しいクイズを追加した時は両方に反映する）。
+// quizIdは【本番（deploy）側】の各クイズファイルのconfig.quiz_id。ローカル（日本語ファイル名）と
+// deploy（英語ファイル名）ではquiz_idの値そのものが違う（本番はdeploy側の値で送信されるため、
+// 必ずdeploy/index.htmlのQUIZZES配列のfile値・deploy側各クイズファイルのconfig.quiz_idと一致させる）。
+// publishedDateはinstruction.mdに明記された制作日を代用（実際の案内日とズレる可能性あり）。
+// 記録が見当たらないものはnull（マトリクスには「不明」と表示される）。
 const QUIZ_CATALOG = [
-  { quizId: "10_04_02_01_抱っこの仕方_クイズ_ver001", title: "抱っこの仕方", category: "犬の扱い方" },
-  { quizId: "10_04_02_02_足の上げ方_クイズ_ver001", title: "足の上げ方", category: "犬の扱い方" },
-  { quizId: "10_04_02_03_ドライ&ブロー_クイズ_ver001", title: "ドライ&ブロー", category: "犬の扱い方" },
-  { quizId: "10_04_02_04_道具の説明①_クイズ_ver001", title: "道具の説明①", category: "グルーマー" },
-  { quizId: "10_04_02_05_お尻カットガイド_クイズ_ver001", title: "お尻カットガイド", category: "カット" },
-  { quizId: "10_04_02_06_プードルマズルカット_クイズ_ver001", title: "プードルマズルカット", category: "カット" },
-  { quizId: "10_04_02_22_アシメカット総合_クイズ_ver001", title: "アシメカット総合", category: "カット" },
-  { quizId: "10_04_02_07_DogWellnessMaster第三弾_クイズ_ver001", title: "Dog Wellness Master 第三弾", category: "特別セミナー" },
-  { quizId: "10_04_02_08_やさしさGrooming第一弾①Part1_クイズ_ver001", title: "やさしさGrooming第一弾① Part1", category: "特別セミナー" },
-  { quizId: "10_04_02_09_やさしさGrooming第一弾①Part2_クイズ_ver001", title: "やさしさGrooming第一弾① Part2", category: "特別セミナー" },
-  { quizId: "10_04_02_10_やさしさGrooming第一弾①Part3_クイズ_ver001", title: "やさしさGrooming第一弾① Part3", category: "特別セミナー" },
-  { quizId: "10_04_02_11_やさしさGrooming第一弾②Part1_クイズ_ver001", title: "やさしさGrooming第一弾② Part1", category: "特別セミナー" },
-  { quizId: "10_04_02_12_やさしさGrooming第一弾②Part2_クイズ_ver001", title: "やさしさGrooming第一弾② Part2", category: "特別セミナー" },
-  { quizId: "10_04_02_13_やさしさGrooming第一弾②Part3_クイズ_ver001", title: "やさしさGrooming第一弾② Part3", category: "特別セミナー" },
-  { quizId: "10_04_02_14_やさしさGrooming第一弾③Part1_クイズ_ver001", title: "やさしさGrooming第一弾③ Part1", category: "特別セミナー" },
-  { quizId: "10_04_02_15_やさしさGrooming第一弾③Part2_クイズ_ver001", title: "やさしさGrooming第一弾③ Part2", category: "特別セミナー" },
-  { quizId: "10_04_02_16_DogStressMaster第二弾Part1_クイズ_ver001", title: "Dog Stress Master 第二弾 Part1", category: "特別セミナー" },
-  { quizId: "10_04_02_17_DogStressMaster第二弾Part2_クイズ_ver001", title: "Dog Stress Master 第二弾 Part2", category: "特別セミナー" },
-  { quizId: "10_04_02_18_DogStressMaster第二弾Part3_クイズ_ver001", title: "Dog Stress Master 第二弾 Part3", category: "特別セミナー" },
-  { quizId: "10_04_02_19_DogHistory第一弾Part1_クイズ_ver001", title: "Dog History 第一弾 Part1", category: "特別セミナー" },
-  { quizId: "10_04_02_20_DogHistory第一弾Part2_クイズ_ver001", title: "Dog History 第一弾 Part2", category: "特別セミナー" },
-  { quizId: "10_04_02_21_DogHistory第一弾Part3_クイズ_ver001", title: "Dog History 第一弾 Part3", category: "特別セミナー" },
+  { quizId: "dakko-no-shikata", title: "抱っこの仕方", category: "犬の扱い方", publishedDate: "2026-08-22" },
+  { quizId: "ashi-no-agekata", title: "足の上げ方", category: "犬の扱い方", publishedDate: null },
+  { quizId: "dry-blow", title: "ドライ&ブロー", category: "犬の扱い方", publishedDate: null },
+  { quizId: "dougu-1", title: "道具の説明①", category: "グルーマー", publishedDate: null },
+  { quizId: "oshiri-cut", title: "お尻カットガイド", category: "カット", publishedDate: null },
+  { quizId: "muzzle-cut", title: "プードルマズルカット", category: "カット", publishedDate: null },
+  { quizId: "asime-cut-sougou", title: "アシメカット総合", category: "カット", publishedDate: null },
+  { quizId: "dog-wellness-master-3", title: "Dog Wellness Master 第三弾", category: "特別セミナー", publishedDate: null },
+  { quizId: "yasashisa-grooming-1-1-part1", title: "やさしさGrooming第一弾① Part1", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "yasashisa-grooming-1-1-part2", title: "やさしさGrooming第一弾① Part2", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "yasashisa-grooming-1-1-part3", title: "やさしさGrooming第一弾① Part3", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "yasashisa-grooming-1-2-part1", title: "やさしさGrooming第一弾② Part1", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "yasashisa-grooming-1-2-part2", title: "やさしさGrooming第一弾② Part2", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "yasashisa-grooming-1-2-part3", title: "やさしさGrooming第一弾② Part3", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "yasashisa-grooming-1-3-part1", title: "やさしさGrooming第一弾③ Part1", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "yasashisa-grooming-1-3-part2", title: "やさしさGrooming第一弾③ Part2", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "dog-stress-master-2-part1", title: "Dog Stress Master 第二弾 Part1", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "dog-stress-master-2-part2", title: "Dog Stress Master 第二弾 Part2", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "dog-stress-master-2-part3", title: "Dog Stress Master 第二弾 Part3", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "dog-history-1-part1", title: "Dog History 第一弾 Part1", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "dog-history-1-part2", title: "Dog History 第一弾 Part2", category: "特別セミナー", publishedDate: "2026-08-23" },
+  { quizId: "dog-history-1-part3", title: "Dog History 第一弾 Part3", category: "特別セミナー", publishedDate: "2026-08-23" },
 ];
 const CATEGORY_ORDER = ["犬の扱い方", "グルーマー", "カット", "特別セミナー"];
 
@@ -389,10 +416,10 @@ async function fetchCurrentPassword() {
     const data = await res.json();
     const rec = (data.records || [])[0];
     if (rec && rec.fields && rec.fields['値']) return rec.fields['値'];
-    return DEFAULT_DASHBOARD_PASSWORD;
+    return null; // 設定レコードがまだ無い場合も既定値へは逃がさない（Takeshiのセットアップ待ち）
   } catch (e) {
-    console.log('[パスワード取得] Airtableから取得できなかったため既定値を使用:', e.message);
-    return DEFAULT_DASHBOARD_PASSWORD;
+    console.log('[パスワード取得] Airtableから取得できませんでした:', e.message);
+    return null;
   }
 }
 
@@ -400,13 +427,20 @@ document.getElementById('gateBtn').onclick = tryUnlock;
 document.getElementById('gatePassword').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
 
 function tryUnlock() {
+  const errEl = document.getElementById('gateError');
+  if (currentPassword == null) {
+    errEl.textContent = 'パスワード情報の読み込みに失敗しました。時間をおいてページを再読み込みしてください。';
+    errEl.style.display = 'block';
+    return;
+  }
   const val = document.getElementById('gatePassword').value;
   if (val === currentPassword) {
     try { sessionStorage.setItem(UNLOCK_KEY, '1'); } catch (e) {}
     document.getElementById('gate').style.display = 'none';
     loadDashboard();
   } else {
-    document.getElementById('gateError').style.display = 'block';
+    errEl.textContent = 'パスワードが違います';
+    errEl.style.display = 'block';
   }
 }
 
@@ -552,6 +586,10 @@ function buildStaffSummary(records) {
       if (gap === 1 || gap === 2) streak++;
       else break;
     }
+    // 最終受講から2日を超えて空いていたら、連続記録は途切れている（quiz-engine.jsの
+    // getDisplayStreak()と同じ猶予ルール）。過去の連続記録が今も続いているように
+    // 見えてしまうのを防ぐ。
+    if (daysSince != null && daysSince > 2) streak = 0;
 
     return {
       name: g.name, store: g.store,
@@ -775,8 +813,10 @@ function pairAttempts(allRawRecords) {
       if (si !== -1) { used.add(si); c.__start = starts[si]; }
     });
 
-    // ② 試行IDが無い（旧データ）場合は、直前の未消化の開始とペアリング
-    completes.filter(c => !c.__start).forEach(c => {
+    // ② 試行IDが「そもそも無い」（旧データ）場合だけ、直前の未消化の開始とペアリング。
+    // 試行IDが付いているのにペアが見つからなかった完了（開始の送信漏れ等）は、
+    // 別人・別試行の開始と誤って結び付けないよう、ここでは対象にせず未ペアのままにする。
+    completes.filter(c => !c.__start && !c['試行ID']).forEach(c => {
       let bestIdx = -1;
       starts.forEach((s, i) => {
         if (used.has(i)) return;
@@ -807,11 +847,16 @@ function pairAttempts(allRawRecords) {
   return { pairs, orphanStarts };
 }
 
-function buildDropoffStats(pairs, orphanStarts) {
+// totalCompletionsは完了レコード全件数（スタッフ別サマリーの完了数と同じ計算）を渡す。
+// pairs（開始とペアリングできた完了だけ）を分母に使うと、開始記録の無い古い完了データが
+// 丸ごと分母から抜け落ち、離脱率が実態より大幅に高く出てしまう（getPersonDropoffSummaryで
+// 一度直したのと同じ種類のバグ）。
+function buildDropoffStats(pairs, orphanStarts, totalCompletions) {
   const now = Date.now();
   const confirmedDropoffs = orphanStarts.filter(o => (now - new Date(o.startTime).getTime()) / 60000 > DROPOFF_GRACE_MINUTES);
-  const totalAttempts = pairs.length + confirmedDropoffs.length;
+  const totalAttempts = totalCompletions + confirmedDropoffs.length;
   const dropoffRate = totalAttempts ? Math.round((confirmedDropoffs.length / totalAttempts) * 100) : 0;
+  // 所要時間は、開始・完了の両方の時刻が分かっている試行（pairs）でしか計算できない。
   const avgDurationMin = pairs.length ? Math.round((pairs.reduce((s, p) => s + p.durationMin, 0) / pairs.length) * 10) / 10 : null;
   return { confirmedDropoffs, dropoffRate, avgDurationMin, totalAttempts };
 }
@@ -839,9 +884,12 @@ function renderDropoffTable(confirmedDropoffs) {
 }
 
 // --- 受講マトリクス（縦：スタッフ、横：カテゴリー別クイズ） ---
-// セルの状態は「完了データがあればその中の一番良い結果（満点＞合格＞不合格）」
-// 「完了が無く、離脱（開始したが未完了）だけあれば未完了」「どちらも無ければ未着手」の優先順で決める。
-function getCellStatus(records, orphanStarts, name, store, quiz) {
+// セルの状態は次の優先順で決める：
+// ①完了データがあればその中の一番良い結果（満点＞合格＞不合格）
+// ②完了が無く、管理者が手動解放していれば「解放済み（未受講）」
+// ③完了が無く、離脱（開始したが未完了）だけあれば「未完了」
+// ④どれも無ければ「未着手」
+function getCellStatus(records, orphanStarts, manualUnlockSet, name, store, quiz) {
   const matches = records.filter(r => (r['受講者名'] || '') === name && (r['所属店舗'] || '') === store &&
     ((r['クイズID'] && r['クイズID'] === quiz.quizId) || (!r['クイズID'] && (r['動画タイトル'] || '') === quiz.title)));
   if (matches.length) {
@@ -853,6 +901,9 @@ function getCellStatus(records, orphanStarts, name, store, quiz) {
     if (passed) return { status: 'passed', dateStr };
     return { status: 'failed', dateStr };
   }
+  if (manualUnlockSet.has(name + '|' + store + '|' + quiz.quizId)) {
+    return { status: 'unlocked', dateStr: null };
+  }
   const now = Date.now();
   const orphan = orphanStarts.find(o => o.name === name && o.store === store && o.video === quiz.title);
   if (orphan && (now - new Date(orphan.startTime).getTime()) / 60000 > DROPOFF_GRACE_MINUTES) {
@@ -861,32 +912,111 @@ function getCellStatus(records, orphanStarts, name, store, quiz) {
   return { status: 'none', dateStr: null };
 }
 
-function buildMatrix(records, orphanStarts, staffSummary) {
+function buildMatrix(records, orphanStarts, manualUnlockSet, staffSummary) {
   const groups = CATEGORY_ORDER.map(cat => ({ category: cat, quizzes: QUIZ_CATALOG.filter(q => q.category === cat) }));
   const rows = staffSummary.map(s => ({
     name: s.name, store: s.store,
-    cells: QUIZ_CATALOG.map(q => getCellStatus(records, orphanStarts, s.name, s.store, q)),
+    cells: QUIZ_CATALOG.map(q => Object.assign({ quizId: q.quizId, title: q.title },
+      getCellStatus(records, orphanStarts, manualUnlockSet, s.name, s.store, q))),
   }));
   return { groups, rows };
 }
 
-const MX_LABEL = { perfect: '満点', passed: '合格', failed: '不合格', dropped: '未完了', none: '–' };
-const MX_CLASS = { perfect: 'mx-perfect', passed: 'mx-passed', failed: 'mx-failed', dropped: 'mx-dropped', none: 'mx-none' };
+const MX_LABEL = { perfect: '満点', passed: '合格', failed: '不合格', dropped: '未完了', unlocked: '🔓解放済み', none: '–' };
+const MX_CLASS = { perfect: 'mx-perfect', passed: 'mx-passed', failed: 'mx-failed', dropped: 'mx-dropped', unlocked: 'mx-unlocked', none: 'mx-none' };
+// クリックで操作できるのは「未着手（これから解放できる）」「解放済み（取り消せる）」の2状態だけ。
+// 既に受講済み・離脱中のセルは、手動解放を触っても意味が無いので操作不可にする。
+const MX_CLICKABLE = { none: true, unlocked: true };
 
-function renderMatrix(matrix) {
-  const theadRow1 = ['<tr><th class="mx-name-col"></th>' + matrix.groups.map(g =>
-    `<th colspan="${g.quizzes.length}">${escapeHtml(g.category)}</th>`).join('') + '</tr>'];
+// unlockAvailable=falseの時（「手動解放ログ」の取得に失敗した時）は、未着手・解放済みの
+// セルであっても一切クリックできないようにする。取得できていない状態で見た目だけの「未着手」
+// を信じてクリックすると、実際は既に解放済みのクイズに気付かず重複して解放操作を送ってしまう
+// おそれがあるため（表示が真実かどうか確認できない時は操作させない）。
+function renderMatrix(matrix, unlockAvailable) {
+  const theadRow1 = ['<tr><th class="mx-name-col"></th>' + matrix.groups.map((g, i) =>
+    `<th colspan="${g.quizzes.length}" class="mx-cat-${i % 4}">${escapeHtml(g.category)}</th>`).join('') + '</tr>'];
   const theadRow2 = ['<tr><th class="mx-name-col">氏名</th>' + QUIZ_CATALOG.map(q =>
-    `<th>${escapeHtml(q.title)}</th>`).join('') + '</tr>'];
+    `<th>${escapeHtml(q.title)}<br><span class="mx-published">公開: ${escapeHtml(q.publishedDate || '不明')}</span></th>`).join('') + '</tr>'];
   document.querySelector('#matrixTable thead').innerHTML = theadRow1.join('') + theadRow2.join('');
 
   document.querySelector('#matrixTable tbody').innerHTML = matrix.rows.map(row => {
-    const cells = row.cells.map(c => `
-      <td class="mx-cell ${MX_CLASS[c.status]}">${MX_LABEL[c.status]}${c.dateStr ? `<small>${escapeHtml(c.dateStr)}</small>` : ''}</td>
-    `).join('');
+    const cells = row.cells.map(c => {
+      const canClick = unlockAvailable && MX_CLICKABLE[c.status];
+      const clickable = canClick ? ' mx-clickable' : '';
+      const data = canClick
+        ? ` data-name="${escapeHtml(row.name)}" data-store="${escapeHtml(row.store)}" data-quizid="${escapeHtml(c.quizId)}" data-status="${c.status}"`
+        : '';
+      return `<td class="mx-cell ${MX_CLASS[c.status]}${clickable}"${data}>${MX_LABEL[c.status]}${c.dateStr ? `<small>${escapeHtml(c.dateStr)}</small>` : ''}</td>`;
+    }).join('');
     return `<tr><td class="mx-name-col">${escapeHtml(row.name)}</td>${cells}</tr>`;
   }).join('');
 }
+
+// --- 手動解放ログの取得・集計 ---
+async function fetchManualUnlockLog() {
+  const fields = ['氏名', '所属店舗', 'クイズID', '操作', '日時'];
+  let all = [];
+  let offset;
+  do {
+    const params = new URLSearchParams({ pageSize: '100' });
+    fields.forEach(f => params.append('fields[]', f));
+    if (offset) params.append('offset', offset);
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_MANUAL_UNLOCK_TABLE_NAME)}?${params.toString()}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_READONLY_TOKEN}` } });
+    if (!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    all = all.concat((data.records || []).map(r => r.fields));
+    offset = data.offset;
+  } while (offset);
+  return all;
+}
+
+// (氏名|所属店舗|クイズID)ごとに一番新しいイベントだけを見て、「解放」なら解放中と判定する。
+function computeManualUnlockSet(records) {
+  const latestByKey = {};
+  records.forEach(r => {
+    if (!r['氏名'] || !r['クイズID']) return;
+    const key = (r['氏名'] || '') + '|' + (r['所属店舗'] || '') + '|' + (r['クイズID'] || '');
+    const prev = latestByKey[key];
+    if (!prev || (r['日時'] || '') > (prev['日時'] || '')) latestByKey[key] = r;
+  });
+  return new Set(Object.keys(latestByKey).filter(key => latestByKey[key]['操作'] === '解放'));
+}
+
+async function sendManualUnlockEvent(name, store, quizId, action) {
+  const res = await fetch(MANUAL_UNLOCK_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ 合言葉: MANUAL_UNLOCK_SHARED_SECRET, 氏名: name, 所属店舗: store, クイズID: quizId, 操作: action, 日時: new Date().toISOString() }),
+  });
+  if (!res.ok) throw new Error('送信失敗: status ' + res.status);
+}
+
+document.querySelector('#matrixTable tbody').addEventListener('click', async (e) => {
+  const cell = e.target.closest('td.mx-clickable');
+  if (!cell) return;
+  const { name, store, quizid: quizId, status } = cell.dataset;
+  const quiz = QUIZ_CATALOG.find(q => q.quizId === quizId);
+  const title = quiz ? quiz.title : quizId;
+
+  if (status === 'none') {
+    if (!confirm(`${name}さんの「${title}」を手動で解放しますか？`)) return;
+    try {
+      await sendManualUnlockEvent(name, store, quizId, '解放');
+      await loadDashboard();
+    } catch (err) {
+      alert('解放に失敗しました：' + err.message);
+    }
+  } else if (status === 'unlocked') {
+    if (!confirm(`${name}さんの「${title}」の解放を取り消しますか？`)) return;
+    try {
+      await sendManualUnlockEvent(name, store, quizId, '取消');
+      await loadDashboard();
+    } catch (err) {
+      alert('取り消しに失敗しました：' + err.message);
+    }
+  }
+});
 
 async function loadDashboard() {
   document.getElementById('loading').style.display = 'block';
@@ -899,8 +1029,20 @@ async function loadDashboard() {
     const staffSummary = buildStaffSummary(records);
     const weakness = buildWeaknessAnalysis(records);
     const { pairs, orphanStarts } = pairAttempts(all);
-    const dropoffStats = buildDropoffStats(pairs, orphanStarts);
-    const matrix = buildMatrix(records, orphanStarts, staffSummary);
+    const dropoffStats = buildDropoffStats(pairs, orphanStarts, records.length);
+
+    // 「手動解放ログ」テーブルはまだAirtable側に無い可能性がある（Takeshiのセットアップ待ち）。
+    // 取得できなくても、単に手動解放機能が使えないだけでダッシュボード全体は壊さない。
+    let manualUnlockSet = new Set();
+    let manualUnlockAvailable = true;
+    try {
+      manualUnlockSet = computeManualUnlockSet(await fetchManualUnlockLog());
+    } catch (e) {
+      manualUnlockAvailable = false;
+      console.warn('[ダッシュボード] 「手動解放ログ」テーブルが見つからないため、手動解放機能は無効化されます:', e.message);
+    }
+
+    const matrix = buildMatrix(records, orphanStarts, manualUnlockSet, staffSummary);
 
     allPairs = pairs;
     allOrphans = orphanStarts;
@@ -912,7 +1054,7 @@ async function loadDashboard() {
     renderStaffTable(staffSummary);
     renderWeaknessTable(weakness);
     renderDropoffTable(dropoffStats.confirmedDropoffs);
-    renderMatrix(matrix);
+    renderMatrix(matrix, manualUnlockAvailable);
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
