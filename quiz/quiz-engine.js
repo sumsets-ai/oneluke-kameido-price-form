@@ -94,6 +94,84 @@ const STAFF_LIFF_ID = "2006699581-zO4hEWY8";
 const STAFF_LINE_WEBHOOK_URL = "https://hook.us2.make.com/tp3bmwonihs49chh7gd7prclxgogv2ph";
 const STAFF_LINE_SHARED_SECRET = "oneluke-staff-line-2026";
 
+// ============================================================
+// 管理ダッシュボードからの手動解放（本来なら「前のクイズをクリアするまでロック」される
+// クイズを、管理者が個別に解放できるようにする機能）
+// Airtable「手動解放ログ」テーブルに「解放」「取消」のイベントを積み上げ、このクイズ一覧側は
+// 開くたびに読みに行って、そのクイズIDの最新イベントが「解放」なら通常のロック判定を無視する。
+// 書き込みは管理ダッシュボード側だけが行う（このファイル＝スタッフ側は読み取り専用）。
+// ============================================================
+const AIRTABLE_MANUAL_UNLOCK_TABLE_NAME = "手動解放ログ";
+
+async function fetchManualUnlocks(name, store) {
+  const fields = ['クイズID', '操作', '日時'];
+  let all = [];
+  let offset;
+  do {
+    const params = new URLSearchParams({ pageSize: '100' });
+    fields.forEach(f => params.append('fields[]', f));
+    params.append('filterByFormula', `AND({氏名}="${escapeAirtableFormula(name)}", {所属店舗}="${escapeAirtableFormula(store)}")`);
+    if (offset) params.append('offset', offset);
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(AIRTABLE_MANUAL_UNLOCK_TABLE_NAME)}?${params.toString()}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_READONLY_TOKEN}` } });
+    if (!res.ok) throw new Error('手動解放ログ取得失敗: status ' + res.status);
+    const data = await res.json();
+    all = all.concat((data.records || []).map(r => r.fields));
+    offset = data.offset;
+  } while (offset);
+  return all;
+}
+
+// クイズIDごとに一番新しいイベントだけを見て、「解放」なら解放中と判定する（純粋関数）
+function computeUnlockedQuizIds(records) {
+  const latestByQuiz = {};
+  records.forEach(r => {
+    const qid = r['クイズID'];
+    if (!qid) return;
+    const prev = latestByQuiz[qid];
+    if (!prev || (r['日時'] || '') > (prev['日時'] || '')) latestByQuiz[qid] = r;
+  });
+  return Object.keys(latestByQuiz).filter(qid => latestByQuiz[qid]['操作'] === '解放');
+}
+
+function clearManualUnlocks() {
+  try {
+    const suffix = ':' + currentStatsOwner();
+    Object.keys(localStorage).forEach(k => {
+      if (k.indexOf('manualUnlock:') === 0 && k.endsWith(suffix)) localStorage.removeItem(k);
+    });
+  } catch (e) {}
+}
+
+function applyManualUnlocks(quizIds) {
+  clearManualUnlocks();
+  quizIds.forEach(qid => {
+    try { localStorage.setItem(statsKey('manualUnlock:' + qid), '1'); } catch (e) {}
+  });
+}
+
+function isManuallyUnlocked(quizId) {
+  try { return localStorage.getItem(statsKey('manualUnlock:' + quizId)) === '1'; } catch (e) { return false; }
+}
+
+// クイズ一覧.htmlの起動時に呼ぶ。氏名・店舗が未登録（初回訪問）の場合は何もしない
+// （何も受講していないので解放する対象も無い）。取得に失敗しても静かに諦める
+// （手動解放が使えないだけで、通常のロック判定はそのまま動く）。
+async function syncManualUnlocks() {
+  let name = '', store = '';
+  try {
+    name = localStorage.getItem(PROFILE_KEYS.name) || '';
+    store = localStorage.getItem(PROFILE_KEYS.store) || '';
+  } catch (e) {}
+  if (!name) return;
+  try {
+    const records = await fetchManualUnlocks(name, store);
+    applyManualUnlocks(computeUnlockedQuizIds(records));
+  } catch (e) {
+    console.log('[手動解放] 取得できなかったため通常のロック判定のみで表示します:', e.message);
+  }
+}
+
 // 合格ライン（この割合以上の正答率で「合格」＝次のクイズが解放される。100%は別途「パーフェクト」称号）
 const PASS_THRESHOLD = 0.7;
 
