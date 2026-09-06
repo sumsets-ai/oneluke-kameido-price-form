@@ -122,7 +122,39 @@
   }
   tbody td { padding: 10px 14px; border-top: 1px solid var(--card-line); font-variant-numeric: tabular-nums; }
   tbody tr:hover { background: #fafdfd; }
+  #staffTable tbody tr { cursor: pointer; }
   .num { text-align: right; }
+
+  /* ---- スタッフ詳細モーダル ---- */
+  #staffModal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: hsl(var(--shadow) / 0.45);
+    z-index: 100;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+  }
+  #staffModal.open { display: flex; }
+  #staffModalCard {
+    background: var(--card);
+    border-radius: 20px;
+    max-width: 560px;
+    width: 100%;
+    max-height: 80vh;
+    overflow-y: auto;
+    padding: 24px 24px 20px;
+    box-shadow: 0 20px 50px -20px hsl(var(--shadow) / 0.5);
+  }
+  #staffModalCard .modal-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 4px; }
+  #staffModalCard h3 { font-family: "Fredoka", sans-serif; font-size: 18px; color: var(--tiffany-deep); margin: 0; }
+  #staffModalCard .modal-sub { color: var(--muted); font-size: 12.5px; margin: 0 0 16px; }
+  #staffModalClose {
+    background: none; border: none; cursor: pointer;
+    font-size: 20px; color: var(--muted); line-height: 1; padding: 4px;
+  }
+  #staffModalClose:hover { color: var(--ink); }
   .pill {
     display: inline-block;
     padding: 3px 10px;
@@ -199,6 +231,19 @@
   </section>
 
   <section>
+    <h2>📉 離脱一覧（動画は確認したが、採点まで進んでいない）</h2>
+    <p class="section-desc">「確認した」を押してから30分以上、採点が完了していない挑戦を表示します（受講中の可能性がある直近30分は除外）</p>
+    <div class="table-wrap">
+      <table id="dropoffTable">
+        <thead>
+          <tr><th>氏名</th><th>動画</th><th>開始日</th><th>経過</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
     <h2>⚠️ 弱点分析（設問別 不正解率）</h2>
     <p class="section-desc">複数人が同じ問題を間違えているほど上に表示されます（2回以上の回答実績がある問題のみ集計）</p>
     <div class="table-wrap">
@@ -211,6 +256,26 @@
     </div>
   </section>
 
+</div>
+
+<div id="staffModal">
+  <div id="staffModalCard">
+    <div class="modal-head">
+      <div>
+        <h3 id="staffModalName"></h3>
+        <p class="modal-sub" id="staffModalSub"></p>
+      </div>
+      <button id="staffModalClose" aria-label="閉じる">✕</button>
+    </div>
+    <div class="table-wrap">
+      <table id="staffModalTable">
+        <thead>
+          <tr><th>日付</th><th>動画</th><th class="num">点数</th><th>判定</th></tr>
+        </thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- 店舗・スタッフのマスタとAirtable接続情報（STORE_OPTIONS / STAFF_BY_STORE / AIRTABLE_*）を使い回す -->
@@ -234,6 +299,7 @@ const PW_CHANGE_WEBHOOK_URL = atob("aHR0cHM6Ly9ob29rLnVzMi5tYWtlLmNvbS9QTEFDRUhP
 const PW_CHANGE_SHARED_SECRET = "oneluke-dash-pwchange-2026";
 
 let currentPassword = DEFAULT_DASHBOARD_PASSWORD;
+let allRecords = []; // スタッフ詳細モーダル用に、読み込んだ受講記録を保持しておく
 
 async function fetchCurrentPassword() {
   try {
@@ -313,8 +379,10 @@ document.getElementById('pwSaveBtn').onclick = async () => {
 };
 
 // --- Airtableから全件取得（100件ごとにページ送り） ---
-async function fetchAllRecords() {
-  const fields = ['受講者名', '所属店舗', '動画タイトル', 'クイズID', '受講日時', '正答数', '総問題数', '正答率', '合格判定', '満点フラグ', '回答詳細'];
+// 「試行ID」列はまだAirtable側に無い可能性がある（quiz-engine.js側は先に対応済みだが、
+// Airtableへの列追加・Makeマッピングはこれから）。存在しない列をfields[]に指定するとAirtableは
+// 422で全体を拒否するため、まずは付きで試し、422ならその列を抜いて再取得する。
+async function fetchRecordsWithFields(fields) {
   let all = [];
   let offset;
   do {
@@ -329,6 +397,19 @@ async function fetchAllRecords() {
     offset = data.offset;
   } while (offset);
   return all;
+}
+
+async function fetchAllRecords() {
+  const fields = ['受講者名', '所属店舗', '動画タイトル', 'クイズID', '受講日時', 'ステータス', '試行ID', '正答数', '総問題数', '正答率', '合格判定', '満点フラグ', '回答詳細'];
+  try {
+    return await fetchRecordsWithFields(fields);
+  } catch (e) {
+    if (String(e.message).includes('422')) {
+      console.warn('[ダッシュボード] 「試行ID」列がAirtableにまだ無いため、それを除いて再取得します');
+      return await fetchRecordsWithFields(fields.filter(f => f !== '試行ID'));
+    }
+    throw e;
+  }
 }
 
 // 「回答詳細」テキストを設問ごとに分解する。
@@ -434,7 +515,7 @@ function statusPill(daysSince) {
   return `<span class="pill pill-danger">${daysSince}日前</span>`;
 }
 
-function renderStats(staffSummary, records) {
+function renderStats(staffSummary, records, dropoffStats) {
   const totalStaff = staffSummary.length;
   const neverDone = staffSummary.filter(s => s.daysSince == null).length;
   const inactive7 = staffSummary.filter(s => s.daysSince != null && s.daysSince > 7).length;
@@ -445,6 +526,8 @@ function renderStats(staffSummary, records) {
     { label: '累計受講回数', value: totalCompletions },
     { label: '一度も未受講', value: neverDone },
     { label: '7日以上未受講', value: inactive7 },
+    { label: '離脱率', value: dropoffStats.dropoffRate + '%' },
+    { label: '平均所要時間', value: dropoffStats.avgDurationMin == null ? '—' : dropoffStats.avgDurationMin + '分' },
   ];
   document.getElementById('statRow').innerHTML = stats.map(s => `
     <div class="stat-card"><div class="label">${escapeHtml(s.label)}</div><div class="value">${s.value}</div></div>
@@ -454,7 +537,7 @@ function renderStats(staffSummary, records) {
 function renderStaffTable(staffSummary) {
   const tbody = document.querySelector('#staffTable tbody');
   tbody.innerHTML = staffSummary.map(s => `
-    <tr>
+    <tr data-name="${escapeHtml(s.name)}" data-store="${escapeHtml(s.store)}">
       <td>${escapeHtml(s.name)}</td>
       <td>${escapeHtml(s.store)}</td>
       <td class="num">${s.completedCount}</td>
@@ -466,6 +549,68 @@ function renderStaffTable(staffSummary) {
     </tr>
   `).join('');
 }
+
+// --- スタッフ別詳細モーダル ---
+// 該当スタッフの受講履歴を、新しい順に並べて返す（純粋関数・テスト容易）。
+function getStaffHistory(records, name, store) {
+  return records
+    .filter(r => (r['受講者名'] || '') === name && (r['所属店舗'] || '') === store)
+    .map(r => {
+      const total = r['総問題数'];
+      const correct = r['正答数'];
+      const perfect = correct != null && total != null && correct === total;
+      const passed = correct != null && total > 0 && (correct / total) >= PASS_THRESHOLD;
+      return {
+        rawDate: r['受講日時'] || '',
+        date: isoToLocalDateStr(r['受講日時']) || '—',
+        video: r['動画タイトル'] || '(不明)',
+        correct, total, perfect, passed,
+      };
+    })
+    .sort((a, b) => (b.rawDate || '').localeCompare(a.rawDate || ''));
+}
+
+function historyStatusPill(h) {
+  if (h.correct == null || !h.total) return `<span class="pill pill-muted">—</span>`;
+  if (h.perfect) return `<span class="pill pill-ok">🌟パーフェクト</span>`;
+  if (h.passed) return `<span class="pill pill-ok">✅合格</span>`;
+  return `<span class="pill pill-danger">❌不合格</span>`;
+}
+
+function openStaffModal(name, store) {
+  const history = getStaffHistory(allRecords, name, store);
+  document.getElementById('staffModalName').textContent = name;
+  document.getElementById('staffModalSub').textContent = store + '｜受講履歴 ' + history.length + '件';
+  const tbody = document.querySelector('#staffModalTable tbody');
+  tbody.innerHTML = history.length
+    ? history.map(h => `
+        <tr>
+          <td>${escapeHtml(h.date)}</td>
+          <td>${escapeHtml(h.video)}</td>
+          <td class="num">${h.correct == null ? '—' : h.correct + '/' + h.total}</td>
+          <td>${historyStatusPill(h)}</td>
+        </tr>
+      `).join('')
+    : `<tr><td colspan="4" style="text-align:center; color:var(--muted);">まだ受講記録がありません</td></tr>`;
+  document.getElementById('staffModal').classList.add('open');
+}
+
+function closeStaffModal() {
+  document.getElementById('staffModal').classList.remove('open');
+}
+
+document.querySelector('#staffTable tbody').addEventListener('click', (e) => {
+  const row = e.target.closest('tr');
+  if (!row || !row.dataset.name) return;
+  openStaffModal(row.dataset.name, row.dataset.store);
+});
+document.getElementById('staffModalClose').onclick = closeStaffModal;
+document.getElementById('staffModal').addEventListener('click', (e) => {
+  if (e.target.id === 'staffModal') closeStaffModal();
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape') closeStaffModal();
+});
 
 function renderWeaknessTable(weakness) {
   const tbody = document.querySelector('#weaknessTable tbody');
@@ -484,19 +629,121 @@ function renderWeaknessTable(weakness) {
   `).join('');
 }
 
+// --- 離脱・受講ペース分析 ---
+// 開始しなかった猶予期間。始めたばかりの人を「離脱」と誤判定しないための待ち時間。
+const DROPOFF_GRACE_MINUTES = 30;
+
+// 「開始」と「完了」を1回の挑戦単位でペアリングする。
+// ①試行IDが両方に付いていれば、それで確実に対応付ける（2026-09-06以降のデータ）
+// ②試行IDが無い古いデータは、同じ人・同じクイズの中で「直前の未消化の開始」と時系列でペアリングする（後方互換）
+function pairAttempts(allRawRecords) {
+  const groups = {};
+  allRawRecords.forEach(r => {
+    const name = r['受講者名'] || '';
+    const store = r['所属店舗'] || '';
+    const quizId = r['クイズID'] || r['動画タイトル'] || '';
+    if (!name || !quizId || !r['ステータス']) return;
+    const key = name + '|' + store + '|' + quizId;
+    if (!groups[key]) groups[key] = [];
+    groups[key].push(r);
+  });
+
+  const pairs = [];
+  const orphanStarts = [];
+
+  Object.values(groups).forEach(rows => {
+    rows.sort((a, b) => (a['受講日時'] || '').localeCompare(b['受講日時'] || ''));
+    const starts = rows.filter(r => r['ステータス'] === '開始');
+    const completes = rows.filter(r => r['ステータス'] === '完了');
+    const used = new Set();
+
+    // ① 試行IDが一致するものを確実にペアリング
+    completes.forEach(c => {
+      if (!c['試行ID']) return;
+      const si = starts.findIndex((s, i) => !used.has(i) && s['試行ID'] === c['試行ID']);
+      if (si !== -1) { used.add(si); c.__start = starts[si]; }
+    });
+
+    // ② 試行IDが無い（旧データ）場合は、直前の未消化の開始とペアリング
+    completes.filter(c => !c.__start).forEach(c => {
+      let bestIdx = -1;
+      starts.forEach((s, i) => {
+        if (used.has(i)) return;
+        if ((s['受講日時'] || '') <= (c['受講日時'] || '')) {
+          if (bestIdx === -1 || s['受講日時'] > starts[bestIdx]['受講日時']) bestIdx = i;
+        }
+      });
+      if (bestIdx !== -1) { used.add(bestIdx); c.__start = starts[bestIdx]; }
+    });
+
+    completes.forEach(c => {
+      if (!c.__start) return;
+      const startMs = new Date(c.__start['受講日時']).getTime();
+      const endMs = new Date(c['受講日時']).getTime();
+      pairs.push({
+        name: c['受講者名'], store: c['所属店舗'], video: c['動画タイトル'],
+        startTime: c.__start['受講日時'], endTime: c['受講日時'],
+        durationMin: (endMs - startMs) / 60000,
+      });
+    });
+
+    starts.forEach((s, i) => {
+      if (used.has(i)) return; // 完了とペアリングできた＝離脱ではない
+      orphanStarts.push({ name: s['受講者名'], store: s['所属店舗'], video: s['動画タイトル'], startTime: s['受講日時'] });
+    });
+  });
+
+  return { pairs, orphanStarts };
+}
+
+function buildDropoffStats(pairs, orphanStarts) {
+  const now = Date.now();
+  const confirmedDropoffs = orphanStarts.filter(o => (now - new Date(o.startTime).getTime()) / 60000 > DROPOFF_GRACE_MINUTES);
+  const totalAttempts = pairs.length + confirmedDropoffs.length;
+  const dropoffRate = totalAttempts ? Math.round((confirmedDropoffs.length / totalAttempts) * 100) : 0;
+  const avgDurationMin = pairs.length ? Math.round((pairs.reduce((s, p) => s + p.durationMin, 0) / pairs.length) * 10) / 10 : null;
+  return { confirmedDropoffs, dropoffRate, avgDurationMin, totalAttempts };
+}
+
+function renderDropoffTable(confirmedDropoffs) {
+  const tbody = document.querySelector('#dropoffTable tbody');
+  const today = todayStr();
+  const sorted = [...confirmedDropoffs].sort((a, b) => (b.startTime || '').localeCompare(a.startTime || ''));
+  if (!sorted.length) {
+    tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; color:var(--muted);">離脱は見つかりませんでした</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = sorted.slice(0, 30).map(o => {
+    const dateStr = isoToLocalDateStr(o.startTime) || '—';
+    const days = dateStr !== '—' ? daysBetween(dateStr, today) : null;
+    return `
+      <tr>
+        <td>${escapeHtml(o.name)}</td>
+        <td>${escapeHtml(o.video)}</td>
+        <td>${dateStr}</td>
+        <td>${days == null ? '—' : days + '日前'}</td>
+      </tr>
+    `;
+  }).join('');
+}
+
 async function loadDashboard() {
   document.getElementById('loading').style.display = 'block';
   document.getElementById('errorBox').style.display = 'none';
   try {
     const all = await fetchAllRecords();
     const records = all.filter(r => r['正答数'] != null && r['総問題数'] > 0);
+    allRecords = records;
 
     const staffSummary = buildStaffSummary(records);
     const weakness = buildWeaknessAnalysis(records);
+    const { pairs, orphanStarts } = pairAttempts(all);
+    const dropoffStats = buildDropoffStats(pairs, orphanStarts);
 
-    renderStats(staffSummary, records);
+    renderStats(staffSummary, records, dropoffStats);
     renderStaffTable(staffSummary);
     renderWeaknessTable(weakness);
+    renderDropoffTable(dropoffStats.confirmedDropoffs);
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
