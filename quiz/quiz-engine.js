@@ -1,5 +1,10 @@
 /**
- * 研修クイズ 共通エンジン ver008
+ * 研修クイズ 共通エンジン ver009
+ * （2026-09-06：離脱率・所要時間の集計精度を上げるため、「開始」と「完了」イベントに
+ *   共通の試行ID（1回の挑戦を貫通するID。送信ID＝各メッセージ自体の識別用とは別物）を追加。
+ *   これにより、同じ人が同じクイズを複数回開始した場合でも、どの開始がどの完了に対応するかを
+ *   確実にペアリングできる。管理ダッシュボード側の集計ロジックが対応）
+ * （旧履歴）研修クイズ 共通エンジン ver008
  * （2026-09-05：クイズの登録画面とLINE ID連携を一本化。専用ページを廃止し、LINE経由（LIFF）で
  *   開かれた時だけ登録の裏側で無言でLINE IDを紐づける。通常ブラウザからのアクセス時は
  *   影響なく通常通り動作する）
@@ -326,6 +331,9 @@ function initQuiz(config) {
   const questions = config.questions.map(shuffleChoices);
   const selected = new Array(questions.length).fill(null);
   let userName = "";
+  // 「確認した」〜「採点する」の1回の挑戦を貫通して紐付けるID（離脱率・所要時間の集計用）。
+  // 送信ID（各メッセージ自体の識別用）とは別物。
+  let currentAttemptId = null;
 
   const app = document.getElementById('app');
   app.innerHTML = `
@@ -523,7 +531,8 @@ function initQuiz(config) {
     videoConfirmScreen.style.display = 'block';
     document.getElementById('confirmWatchedBtn').onclick = () => {
       videoConfirmScreen.style.display = 'none';
-      sendStartEvent(config, userName, userStore);
+      currentAttemptId = (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
+      sendStartEvent(config, userName, userStore, currentAttemptId);
       beginQuiz();
     };
   }
@@ -681,7 +690,7 @@ function initQuiz(config) {
     const quizId = config.quiz_id || config.video_title;
     if (isPassed) markCleared(quizId);
     if (isPerfect) markPerfect(quizId);
-    sendResult(config, questions, selected, userName, userStore, score, isPassed, isPerfect);
+    sendResult(config, questions, selected, userName, userStore, score, isPassed, isPerfect, currentAttemptId);
   };
 
   // --- ④ 苦手な問題だけの復習（Airtableへの再送信はしない、その場の練習用） ---
@@ -807,10 +816,11 @@ function shuffleChoices(item) {
 
 // --- 開始イベントの送信（離脱率算出用） ---
 // 「確認した」を押した時点で、無言でAirtableに1行記録する。正答数・正答率などはまだ空欄。
-function sendStartEvent(config, userName, userStore) {
+function sendStartEvent(config, userName, userStore, attemptId) {
   const payload = {
     合言葉: QUIZ_SHARED_SECRET,
     送信ID: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+    試行ID: attemptId, // 同じ挑戦の「開始」と「完了」を確実に紐付けるためのID（離脱率・所要時間の集計用）
     受講者名: userName,
     所属店舗: userStore,
     動画タイトル: config.video_title,
@@ -830,7 +840,7 @@ function sendStartEvent(config, userName, userStore) {
 
 // --- 回答結果の送信（Airtable連携用） ---
 // 画面には状態を表示しない。送信の成否はブラウザの開発者ツール（コンソール）にのみ記録する。
-function sendResult(config, questions, selected, userName, userStore, score, isPassed, isPerfect) {
+function sendResult(config, questions, selected, userName, userStore, score, isPassed, isPerfect, attemptId) {
   const detailText = questions.map((item, qi) => {
     const isCorrect = selected[qi] === item.answer;
     return `Q${qi + 1}. ${item.q}\n`
@@ -841,6 +851,7 @@ function sendResult(config, questions, selected, userName, userStore, score, isP
   const payload = {
     合言葉: QUIZ_SHARED_SECRET,
     送信ID: (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random()),
+    試行ID: attemptId, // 対応する「開始」イベントと同じ値（未対応の場合はnull＝旧バージョンからの呼び出し等）
     受講者名: userName,
     所属店舗: userStore,
     動画タイトル: config.video_title,
