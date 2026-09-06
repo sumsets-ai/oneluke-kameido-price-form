@@ -155,6 +155,31 @@
     font-size: 20px; color: var(--muted); line-height: 1; padding: 4px;
   }
   #staffModalClose:hover { color: var(--ink); }
+  #staffModalStats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin: 14px 0 18px;
+  }
+  #staffModalStats .mini-stat { background: var(--tiffany-tint); border-radius: 10px; padding: 8px 10px; }
+  #staffModalStats .mini-stat .label { font-size: 10.5px; color: var(--tiffany-deep); margin-bottom: 2px; }
+  #staffModalStats .mini-stat .value { font-family: "Fredoka", sans-serif; font-size: 15px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+
+  /* ---- 受講マトリクス ---- */
+  #matrixTable th, #matrixTable td { white-space: nowrap; }
+  #matrixTable thead th { position: sticky; top: 0; z-index: 2; }
+  #matrixTable .mx-name-col { position: sticky; left: 0; z-index: 3; background: var(--card); }
+  #matrixTable thead .mx-name-col { z-index: 4; background: var(--tiffany-tint); }
+  .mx-cell { text-align: center; font-size: 11.5px; }
+  .mx-cell small { display: block; color: var(--muted); font-size: 10px; font-weight: 400; }
+  .mx-perfect { background: var(--tiffany-tint); color: var(--tiffany-deep); }
+  .mx-passed { background: var(--green-tint); color: var(--green); }
+  .mx-failed { background: var(--red-tint); color: var(--red); }
+  .mx-dropped { background: var(--orange-tint); color: var(--orange-deep); }
+  .mx-none { color: var(--muted); }
+  .mx-legend { display: flex; gap: 14px; flex-wrap: wrap; font-size: 12px; color: var(--ink-soft); margin: 10px 2px 0; }
+  .mx-legend span { display: inline-flex; align-items: center; gap: 5px; }
+  .mx-legend i { display: inline-block; width: 10px; height: 10px; border-radius: 3px; }
   .pill {
     display: inline-block;
     padding: 3px 10px;
@@ -231,6 +256,24 @@
   </section>
 
   <section>
+    <h2>🗂 受講マトリクス</h2>
+    <p class="section-desc">誰がどのクイズをまだやっていないか、一覧で確認できます（横スクロールで全クイズを表示）</p>
+    <div class="table-wrap">
+      <table id="matrixTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="mx-legend">
+      <span><i style="background:var(--tiffany-tint)"></i>満点</span>
+      <span><i style="background:var(--green-tint)"></i>合格</span>
+      <span><i style="background:var(--red-tint)"></i>不合格</span>
+      <span><i style="background:var(--orange-tint)"></i>開始したが未完了</span>
+      <span><i style="background:var(--card-line)"></i>未着手</span>
+    </div>
+  </section>
+
+  <section>
     <h2>📉 離脱一覧（動画は確認したが、採点まで進んでいない）</h2>
     <p class="section-desc">「確認した」を押してから30分以上、採点が完了していない挑戦を表示します（受講中の可能性がある直近30分は除外）</p>
     <div class="table-wrap">
@@ -267,6 +310,7 @@
       </div>
       <button id="staffModalClose" aria-label="閉じる">✕</button>
     </div>
+    <div id="staffModalStats"></div>
     <div class="table-wrap">
       <table id="staffModalTable">
         <thead>
@@ -300,6 +344,39 @@ const PW_CHANGE_SHARED_SECRET = "oneluke-dash-pwchange-2026";
 
 let currentPassword = DEFAULT_DASHBOARD_PASSWORD;
 let allRecords = []; // スタッフ詳細モーダル用に、読み込んだ受講記録を保持しておく
+let allPairs = [];   // 「開始→完了」のペア（pairAttemptsの結果）。所要時間の計算用に保持
+let allOrphans = [];  // ペアにならなかった「開始」（＝離脱候補）。モーダルの離脱内訳用に保持
+let allRaw = [];      // Airtableから取得した生の全レコード（ステータス「開始」「完了」両方含む）
+let staffSummaryMap = {}; // name|store → buildStaffSummaryの1件。モーダルの上部統計用に保持
+
+// クイズのマスタ一覧（タイトル・カテゴリー）。クイズ一覧.html/deploy/index.htmlのQUIZZES配列と
+// 内容を一致させること（新しいクイズを追加した時は両方に反映する）。
+// quizIdは各クイズファイルのconfig.quiz_id（＝ファイル名から拡張子を除いたもの）と対応する。
+const QUIZ_CATALOG = [
+  { quizId: "10_04_02_01_抱っこの仕方_クイズ_ver001", title: "抱っこの仕方", category: "犬の扱い方" },
+  { quizId: "10_04_02_02_足の上げ方_クイズ_ver001", title: "足の上げ方", category: "犬の扱い方" },
+  { quizId: "10_04_02_03_ドライ&ブロー_クイズ_ver001", title: "ドライ&ブロー", category: "犬の扱い方" },
+  { quizId: "10_04_02_04_道具の説明①_クイズ_ver001", title: "道具の説明①", category: "グルーマー" },
+  { quizId: "10_04_02_05_お尻カットガイド_クイズ_ver001", title: "お尻カットガイド", category: "カット" },
+  { quizId: "10_04_02_06_プードルマズルカット_クイズ_ver001", title: "プードルマズルカット", category: "カット" },
+  { quizId: "10_04_02_22_アシメカット総合_クイズ_ver001", title: "アシメカット総合", category: "カット" },
+  { quizId: "10_04_02_07_DogWellnessMaster第三弾_クイズ_ver001", title: "Dog Wellness Master 第三弾", category: "特別セミナー" },
+  { quizId: "10_04_02_08_やさしさGrooming第一弾①Part1_クイズ_ver001", title: "やさしさGrooming第一弾① Part1", category: "特別セミナー" },
+  { quizId: "10_04_02_09_やさしさGrooming第一弾①Part2_クイズ_ver001", title: "やさしさGrooming第一弾① Part2", category: "特別セミナー" },
+  { quizId: "10_04_02_10_やさしさGrooming第一弾①Part3_クイズ_ver001", title: "やさしさGrooming第一弾① Part3", category: "特別セミナー" },
+  { quizId: "10_04_02_11_やさしさGrooming第一弾②Part1_クイズ_ver001", title: "やさしさGrooming第一弾② Part1", category: "特別セミナー" },
+  { quizId: "10_04_02_12_やさしさGrooming第一弾②Part2_クイズ_ver001", title: "やさしさGrooming第一弾② Part2", category: "特別セミナー" },
+  { quizId: "10_04_02_13_やさしさGrooming第一弾②Part3_クイズ_ver001", title: "やさしさGrooming第一弾② Part3", category: "特別セミナー" },
+  { quizId: "10_04_02_14_やさしさGrooming第一弾③Part1_クイズ_ver001", title: "やさしさGrooming第一弾③ Part1", category: "特別セミナー" },
+  { quizId: "10_04_02_15_やさしさGrooming第一弾③Part2_クイズ_ver001", title: "やさしさGrooming第一弾③ Part2", category: "特別セミナー" },
+  { quizId: "10_04_02_16_DogStressMaster第二弾Part1_クイズ_ver001", title: "Dog Stress Master 第二弾 Part1", category: "特別セミナー" },
+  { quizId: "10_04_02_17_DogStressMaster第二弾Part2_クイズ_ver001", title: "Dog Stress Master 第二弾 Part2", category: "特別セミナー" },
+  { quizId: "10_04_02_18_DogStressMaster第二弾Part3_クイズ_ver001", title: "Dog Stress Master 第二弾 Part3", category: "特別セミナー" },
+  { quizId: "10_04_02_19_DogHistory第一弾Part1_クイズ_ver001", title: "Dog History 第一弾 Part1", category: "特別セミナー" },
+  { quizId: "10_04_02_20_DogHistory第一弾Part2_クイズ_ver001", title: "Dog History 第一弾 Part2", category: "特別セミナー" },
+  { quizId: "10_04_02_21_DogHistory第一弾Part3_クイズ_ver001", title: "Dog History 第一弾 Part3", category: "特別セミナー" },
+];
+const CATEGORY_ORDER = ["犬の扱い方", "グルーマー", "カット", "特別セミナー"];
 
 async function fetchCurrentPassword() {
   try {
@@ -577,10 +654,44 @@ function historyStatusPill(h) {
   return `<span class="pill pill-danger">❌不合格</span>`;
 }
 
+// このスタッフの「受講回数（開始した回数）・採点実行回数（完了した回数）・離脱回数」を集計する。
+// 採点実行回数はallRecords（完了レコード全件）から数える＝スタッフ別サマリーの完了数と必ず一致させる
+// （pairAttemptsは「開始」記録が無い古い完了データを拾えないため、それだけを使うと過少カウントになる）。
+// 離脱回数だけは、開始とのペアリングが必要なのでallOrphansを使う。
+function getPersonDropoffSummary(name, store) {
+  const now = Date.now();
+  const totalCompletions = allRecords.filter(r => (r['受講者名'] || '') === name && (r['所属店舗'] || '') === store).length;
+  const totalStartsRaw = allRaw.filter(r => (r['受講者名'] || '') === name && (r['所属店舗'] || '') === store && r['ステータス'] === '開始').length;
+  const personOrphans = allOrphans.filter(o => o.name === name && o.store === store);
+  const confirmedDropoffs = personOrphans.filter(o => (now - new Date(o.startTime).getTime()) / 60000 > DROPOFF_GRACE_MINUTES);
+  return {
+    totalStarts: totalStartsRaw,
+    totalCompletions,
+    totalDropoffs: confirmedDropoffs.length,
+  };
+}
+
+function renderStaffModalStats(name, store) {
+  const s = staffSummaryMap[name + '|' + store] || {};
+  const d = getPersonDropoffSummary(name, store);
+  const stats = [
+    { label: '完了数', value: s.completedCount ?? 0 },
+    { label: '平均正答率', value: s.avgRate == null ? '—' : s.avgRate + '%' },
+    { label: '連続記録', value: '🔥' + (s.streak ?? 0) },
+    { label: '合計pt', value: '⭐' + (s.xp ?? 0) },
+    { label: '最終受講', value: s.lastDate || '—' },
+    { label: '受講/採点/離脱', value: `${d.totalStarts}/${d.totalCompletions}/${d.totalDropoffs}` },
+  ];
+  document.getElementById('staffModalStats').innerHTML = stats.map(st => `
+    <div class="mini-stat"><div class="label">${escapeHtml(st.label)}</div><div class="value">${st.value}</div></div>
+  `).join('');
+}
+
 function openStaffModal(name, store) {
   const history = getStaffHistory(allRecords, name, store);
   document.getElementById('staffModalName').textContent = name;
   document.getElementById('staffModalSub').textContent = store + '｜受講履歴 ' + history.length + '件';
+  renderStaffModalStats(name, store);
   const tbody = document.querySelector('#staffModalTable tbody');
   tbody.innerHTML = history.length
     ? history.map(h => `
@@ -727,6 +838,56 @@ function renderDropoffTable(confirmedDropoffs) {
   }).join('');
 }
 
+// --- 受講マトリクス（縦：スタッフ、横：カテゴリー別クイズ） ---
+// セルの状態は「完了データがあればその中の一番良い結果（満点＞合格＞不合格）」
+// 「完了が無く、離脱（開始したが未完了）だけあれば未完了」「どちらも無ければ未着手」の優先順で決める。
+function getCellStatus(records, orphanStarts, name, store, quiz) {
+  const matches = records.filter(r => (r['受講者名'] || '') === name && (r['所属店舗'] || '') === store &&
+    ((r['クイズID'] && r['クイズID'] === quiz.quizId) || (!r['クイズID'] && (r['動画タイトル'] || '') === quiz.title)));
+  if (matches.length) {
+    const perfect = matches.find(r => r['満点フラグ'] === 'はい' || (r['正答数'] != null && r['正答数'] === r['総問題数']));
+    const passed = matches.find(r => r['合格判定'] === '合格' || (r['正答数'] != null && r['総問題数'] > 0 && (r['正答数'] / r['総問題数']) >= PASS_THRESHOLD));
+    const best = perfect || passed || matches[matches.length - 1];
+    const dateStr = isoToLocalDateStr(best['受講日時']);
+    if (perfect) return { status: 'perfect', dateStr };
+    if (passed) return { status: 'passed', dateStr };
+    return { status: 'failed', dateStr };
+  }
+  const now = Date.now();
+  const orphan = orphanStarts.find(o => o.name === name && o.store === store && o.video === quiz.title);
+  if (orphan && (now - new Date(orphan.startTime).getTime()) / 60000 > DROPOFF_GRACE_MINUTES) {
+    return { status: 'dropped', dateStr: isoToLocalDateStr(orphan.startTime) };
+  }
+  return { status: 'none', dateStr: null };
+}
+
+function buildMatrix(records, orphanStarts, staffSummary) {
+  const groups = CATEGORY_ORDER.map(cat => ({ category: cat, quizzes: QUIZ_CATALOG.filter(q => q.category === cat) }));
+  const rows = staffSummary.map(s => ({
+    name: s.name, store: s.store,
+    cells: QUIZ_CATALOG.map(q => getCellStatus(records, orphanStarts, s.name, s.store, q)),
+  }));
+  return { groups, rows };
+}
+
+const MX_LABEL = { perfect: '満点', passed: '合格', failed: '不合格', dropped: '未完了', none: '–' };
+const MX_CLASS = { perfect: 'mx-perfect', passed: 'mx-passed', failed: 'mx-failed', dropped: 'mx-dropped', none: 'mx-none' };
+
+function renderMatrix(matrix) {
+  const theadRow1 = ['<tr><th class="mx-name-col"></th>' + matrix.groups.map(g =>
+    `<th colspan="${g.quizzes.length}">${escapeHtml(g.category)}</th>`).join('') + '</tr>'];
+  const theadRow2 = ['<tr><th class="mx-name-col">氏名</th>' + QUIZ_CATALOG.map(q =>
+    `<th>${escapeHtml(q.title)}</th>`).join('') + '</tr>'];
+  document.querySelector('#matrixTable thead').innerHTML = theadRow1.join('') + theadRow2.join('');
+
+  document.querySelector('#matrixTable tbody').innerHTML = matrix.rows.map(row => {
+    const cells = row.cells.map(c => `
+      <td class="mx-cell ${MX_CLASS[c.status]}">${MX_LABEL[c.status]}${c.dateStr ? `<small>${escapeHtml(c.dateStr)}</small>` : ''}</td>
+    `).join('');
+    return `<tr><td class="mx-name-col">${escapeHtml(row.name)}</td>${cells}</tr>`;
+  }).join('');
+}
+
 async function loadDashboard() {
   document.getElementById('loading').style.display = 'block';
   document.getElementById('errorBox').style.display = 'none';
@@ -739,11 +900,19 @@ async function loadDashboard() {
     const weakness = buildWeaknessAnalysis(records);
     const { pairs, orphanStarts } = pairAttempts(all);
     const dropoffStats = buildDropoffStats(pairs, orphanStarts);
+    const matrix = buildMatrix(records, orphanStarts, staffSummary);
+
+    allPairs = pairs;
+    allOrphans = orphanStarts;
+    allRaw = all;
+    staffSummaryMap = {};
+    staffSummary.forEach(s => { staffSummaryMap[s.name + '|' + s.store] = s; });
 
     renderStats(staffSummary, records, dropoffStats);
     renderStaffTable(staffSummary);
     renderWeaknessTable(weakness);
     renderDropoffTable(dropoffStats.confirmedDropoffs);
+    renderMatrix(matrix);
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
