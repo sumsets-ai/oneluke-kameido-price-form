@@ -65,12 +65,16 @@ const AIRTABLE_READONLY_TOKEN = atob("cGF0VGFyRnBEV0dUMkdNZHEuMTU4ZWVkMzJiNWM2YT
 // クイズのクリア状況が店舗名＋氏名の組み合わせをキーにしているため、同一人物なのに
 // 別データとして分裂してしまう。選択式にすることで表記ゆれの余地自体をなくす。
 //
-// 店舗が増えたら、STORE_OPTIONSに店舗名を追加し、STAFF_BY_STOREにその店舗のスタッフ配列を
-// 追加するだけでよい（他店舗の運用に影響しない）。スタッフの入れ替わりは、該当店舗の配列を
-// 直接編集する（増員・退職のたびにここを更新する）。
+// 店舗が増えたら、STORE_OPTIONSに{ name, prefecture, phone }を1件追加し、STAFF_BY_STOREに
+// その店舗のスタッフ配列を追加するだけでよい（他店舗の運用に影響しない）。他店舗展開時に
+// 都道府県・電話番号で検索できるよう、店舗名だけでなくこの2つも持たせている。
+// スタッフの入れ替わりは、該当店舗の配列を直接編集する（増員・退職のたびにここを更新する）。
 // リストにまだ載っていない人（入社直後など）向けに「その他（手入力）」も選べるようにしてある。
+// STAFF_BY_STOREは今まで通り「店舗名の文字列」をキーにする（STORE_OPTIONSの各要素の.name）。
 // ============================================================
-const STORE_OPTIONS = ["ワンルーク江東区亀戸店"];
+const STORE_OPTIONS = [
+  { name: "ワンルーク江東区亀戸店", prefecture: "東京都", phone: "050-8893-0169" },
+];
 const STAFF_BY_STORE = {
   "ワンルーク江東区亀戸店": [
     "大堀 咲紀",
@@ -81,6 +85,28 @@ const STAFF_BY_STORE = {
     "松本雄",
   ],
 };
+
+// 検索用に、全角英数字・記号を半角に正規化し、ハイフンや空白を取り除く（表記ゆれを吸収する）。
+// 例：「０３－５６７８」「03 5678」「03-5678」がすべて同じ扱いになる。
+function normalizeForStoreSearch(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, c => String.fromCharCode(c.charCodeAt(0) - 0xFEE0))
+    .replace(/[－ー―‐−]/g, '-')
+    .toLowerCase()
+    .replace(/[-\s　]/g, '');
+}
+
+// 都道府県名・電話番号・店舗名のいずれかに部分一致する店舗だけを返す（未入力なら全件）。
+function filterStoreOptions(query) {
+  const q = normalizeForStoreSearch(query);
+  if (!q) return STORE_OPTIONS;
+  return STORE_OPTIONS.filter(s =>
+    normalizeForStoreSearch(s.name).includes(q) ||
+    normalizeForStoreSearch(s.prefecture).includes(q) ||
+    normalizeForStoreSearch(s.phone).includes(q)
+  );
+}
 const OTHER_NAME_OPTION = "その他（手入力）";
 
 // ============================================================
@@ -433,6 +459,7 @@ function initQuiz(config) {
       <div class="mascot-big">${PAW_SVG}</div>
       <p>最初に登録しましょう（次回から入力不要になります）</p>
       <label class="field-label" for="storeInput">所属店舗名</label>
+      <input type="text" id="storeSearch" class="store-search" placeholder="都道府県・電話番号・店舗名で検索">
       <select id="storeInput"></select>
       <label class="field-label" for="nameSelect">お名前</label>
       <select id="nameSelect"></select>
@@ -1213,13 +1240,30 @@ function escapeHtml(str) {
 // 店舗・氏名の選択欄（表記ゆれ防止のため自由入力ではなく選択式にしている）
 // ============================================================
 
-// 店舗の選択肢を描画し、選んだ店舗に応じて氏名の選択肢を出し分ける（店舗が増えても自動対応）
-function populateStoreAndNameSelects() {
+// 店舗の選択肢を描画し、選んだ店舗に応じて氏名の選択肢を出し分ける（店舗が増えても自動対応）。
+// 検索欄（都道府県・電話番号・店舗名）で入力するたびに、一致する店舗だけに絞り込む。
+// 店舗数が少ないうち（今は1件）は実質フル表示のままだが、店舗が増えた時にそのまま機能する。
+function renderStoreOptions(stores) {
   const storeSelect = document.getElementById('storeInput');
   if (!storeSelect) return;
-  storeSelect.innerHTML = STORE_OPTIONS.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  const prevValue = storeSelect.value;
+  storeSelect.innerHTML = stores.length
+    ? stores.map(s => `<option value="${escapeHtml(s.name)}">${escapeHtml(s.name)}（${escapeHtml(s.prefecture)}）</option>`).join('')
+    : `<option value="">該当する店舗がありません</option>`;
+  // 絞り込み後も、それまで選んでいた店舗が候補に残っていればそのまま維持する
+  if (stores.some(s => s.name === prevValue)) storeSelect.value = prevValue;
   populateNameSelect(storeSelect.value);
+}
+
+function populateStoreAndNameSelects() {
+  const storeSelect = document.getElementById('storeInput');
+  const storeSearch = document.getElementById('storeSearch');
+  if (!storeSelect) return;
+  renderStoreOptions(STORE_OPTIONS);
   storeSelect.onchange = () => populateNameSelect(storeSelect.value);
+  if (storeSearch) {
+    storeSearch.addEventListener('input', () => renderStoreOptions(filterStoreOptions(storeSearch.value)));
+  }
 }
 
 function populateNameSelect(store) {
