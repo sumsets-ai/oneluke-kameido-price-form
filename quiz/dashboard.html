@@ -554,7 +554,10 @@ function buildStaffSummary(records) {
   });
 
   // 名簿にいる全員も、実績ゼロでも一覧に出す（「一度もやっていない人」を可視化するため）
-  STORE_OPTIONS.forEach(store => {
+  // STORE_OPTIONSは{ name, prefecture, phone }の配列（店舗検索機能のため）。
+  // STAFF_BY_STOREは今まで通り店舗名の文字列でキーする。
+  STORE_OPTIONS.forEach(storeInfo => {
+    const store = storeInfo.name;
     (STAFF_BY_STORE[store] || []).forEach(name => {
       const key = name + '|' + store;
       if (!groups[key]) groups[key] = { name, store, records: [] };
