@@ -1,5 +1,9 @@
 /**
- * 研修クイズ 共通エンジン ver011
+ * 研修クイズ 共通エンジン ver012
+ * （2026-09-21：LIFFを、研修Botと同じプロバイダー（Sum-Sets）の下に新しく作ったLINEログインチャネルへ移行。
+ *   旧LIFFで取得したLINE IDは研修Botのユーザーとは別物で、LINEへ通知を送れなかったため。
+ *   移行に合わせて、連携済みフラグを lineLinked → lineLinkedV2 に変更し、全員が新しいIDで自動的に連携し直す）
+ * （旧履歴）研修クイズ 共通エンジン ver011
  * （2026-09-21：実機で、LIFF経由でクイズ本体のページを開くと400エラーになる不具合を修正。
  *   LINE ID連携（liff.init）はクイズ一覧ページ＝LIFFエンドポイントでしか動かさない。
  *   手動解放の取得失敗時は、保存済みの解放を消して通常のロック判定に戻す）
@@ -124,7 +128,7 @@ const OTHER_NAME_OPTION = "その他（手入力）";
 // 無言でLINE IDも一緒に送信する。通常のブラウザ・ブックマークから開いた場合は
 // LIFFが使えないので、その回は何もせず静かにスキップする（エラー表示もしない）。
 // ============================================================
-const STAFF_LIFF_ID = "2006699581-zO4hEWY8";
+const STAFF_LIFF_ID = "2011686522-OSnUpgYJ";
 const STAFF_LINE_WEBHOOK_URL = "https://hook.us2.make.com/tp3bmwonihs49chh7gd7prclxgogv2ph";
 const STAFF_LINE_SHARED_SECRET = "oneluke-staff-line-2026";
 
@@ -1043,10 +1047,10 @@ function sendResult(config, questions, selected, userName, userStore, score, isP
 // LINE ID自動連携（登録の裏側で無言で行う。失敗しても画面には何も表示しない）
 // ============================================================
 function alreadyLineLinked() {
-  try { return localStorage.getItem(statsKey('lineLinked')) === '1'; } catch (e) { return false; }
+  try { return localStorage.getItem(statsKey('lineLinkedV2')) === '1'; } catch (e) { return false; }
 }
 function markLineLinked() {
-  try { localStorage.setItem(statsKey('lineLinked'), '1'); } catch (e) {}
+  try { localStorage.setItem(statsKey('lineLinkedV2'), '1'); } catch (e) {}
 }
 
 // LIFF SDKを動的に読み込む（全クイズHTMLに<script>タグを追加せずに済むように、
