@@ -1309,10 +1309,16 @@ function flushPendingSubmissions() {
 }
 flushPendingSubmissions();
 
+// 文字列をHTMLに埋め込める形にする。
+// 注意：div.innerHTML は & < > だけをエスケープし、引用符はそのまま残す。
+// この関数の結果は data-name="..." のような「引用符で囲んだ属性」にも入れているので、
+// 引用符を残すと属性が途中で閉じてしまい、細工された氏名・店舗名でXSSになる（2026-09-22 修正）。
+// 出力は必ずHTMLとして書き出しており（textContentには使っていない）、実体参照は表示時に元の文字へ戻るため、
+// ここで引用符まで変換して問題ない。
 function escapeHtml(str) {
   const div = document.createElement('div');
   div.textContent = str == null ? '' : str;
-  return div.innerHTML;
+  return div.innerHTML.replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 }
 
 // ============================================================
