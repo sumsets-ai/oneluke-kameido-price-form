@@ -101,6 +101,9 @@ const CATEGORY_CLASS = {
   "特別セミナー": "cat-seminar",
 };
 
+// マイ進捗ページ（リッチメニューの「マイ進捗」から「?go=progress」で開かれた時の行き先）
+const PROGRESS_PAGE = "progress.html";
+
 const trailEl = document.getElementById('trail');
 
 // 管理ダッシュボードからの手動解放を反映してから一覧を描画する。
@@ -109,8 +112,21 @@ const trailEl = document.getElementById('trail');
 (async function renderTrail() {
   await syncManualUnlocks();
 
-  // カテゴリごとに「直前の1本をクリアするまで次は挑戦不可」にする（カテゴリをまたいだ順番待ちはしない）
-  const lastClearedInCategory = {};
+  // カテゴリごとに「直前の1本をクリアするまで次は挑戦不可」にする（カテゴリをまたいだ順番待ちはしない）。
+  // 判定はquiz-engine.jsのcomputeQuizStatesに集約している（マイ進捗ページと共通）。
+  const states = computeQuizStates(QUIZZES);
+
+  // LINEリッチメニューの「続きから」「マイ進捗」用。一覧を描画する前に該当ページへ移動する。
+  const go = getGoParam();
+  if (go === 'progress') { location.replace(PROGRESS_PAGE); return; }
+  if (go === 'next') {
+    const next = pickNextQuiz(states);
+    if (next) { location.replace(next.quiz.file); return; }
+    // 全部クリア済みなら移動せず、一覧の上にひとこと出す
+    trailEl.insertAdjacentHTML('beforebegin',
+      '<p style="text-align:center; font-weight:600; color:var(--tiffany-deep); margin:0 0 16px;">すべてのクイズをクリアしました！おつかれさまです🎉</p>');
+  }
+
   QUIZZES.forEach((quiz, i) => {
     const li = document.createElement('li');
     li.className = 'trail-node ' + (i % 2 === 0 ? 'align-left' : 'align-right');
@@ -126,13 +142,9 @@ const trailEl = document.getElementById('trail');
     body.className = 'node-body';
 
     // この端末で一度でもクリア済みなら、淡くグレーアウト＋Clearスタンプ（再挑戦は引き続き可能）
-    // 判定はファイル名（拡張子なし）で行う。クイズ側のquiz_idと必ず一致させること。
-    const quizId = quiz.file.replace(/\.html$/, '');
-    const cleared = isCleared(quizId);
-    const isFirstInCategory = !(quiz.category in lastClearedInCategory);
-    const wouldBeLockedBySequence = !isFirstInCategory && !lastClearedInCategory[quiz.category];
-    const manuallyUnlocked = isManuallyUnlocked(quizId);
-    const locked = wouldBeLockedBySequence && !manuallyUnlocked;
+    // 判定はファイル名（拡張子なし）＝クイズ側のquiz_idで行う（computeQuizStates内。必ず一致させること）。
+    const st = states[i];
+    const { cleared, wouldBeLockedBySequence, manuallyUnlocked, locked } = st;
 
     if (locked) {
       a.classList.add('locked');
@@ -170,15 +182,12 @@ const trailEl = document.getElementById('trail');
     // 満点（パーフェクト）は合格とは別枠の称号。星バッジだけ付ける（進行の解放条件ではない）
     // クリアスタンプと同じくlocked判定は見ない（実際の運用では、パーフェクトを取れた時点で
     // そのクイズは既に解放済みのはずなので、lockedとperfectが同時にtrueになることはない）
-    if (isPerfectCleared(quizId)) {
+    if (st.perfect) {
       const perfectBadge = document.createElement('div');
       perfectBadge.className = 'perfect-badge';
       perfectBadge.textContent = '⭐';
       a.appendChild(perfectBadge);
     }
-
-    // このカテゴリの「直前のクイズはクリア済みか」を次のループのために更新
-    lastClearedInCategory[quiz.category] = cleared;
 
     a.appendChild(badge);
     a.appendChild(body);
