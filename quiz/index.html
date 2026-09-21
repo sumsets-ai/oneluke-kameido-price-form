@@ -112,6 +112,10 @@ const trailEl = document.getElementById('trail');
 (async function renderTrail() {
   await syncManualUnlocks();
 
+  // LINE ID連携はこのページ（LIFFのエンドポイント）でしか動かせない（クイズ本体のページでは400エラーになる）。
+  // 「続きから」「マイ進捗」で別ページへ移動する前にも済ませる（待つのは最大2秒）。
+  await linkLineIdForHub(2000);
+
   // カテゴリごとに「直前の1本をクリアするまで次は挑戦不可」にする（カテゴリをまたいだ順番待ちはしない）。
   // 判定はquiz-engine.jsのcomputeQuizStatesに集約している（マイ進捗ページと共通）。
   const states = computeQuizStates(QUIZZES);
