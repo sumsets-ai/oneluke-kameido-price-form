@@ -1,5 +1,9 @@
 /**
- * 研修クイズ 共通エンジン ver010
+ * 研修クイズ 共通エンジン ver011
+ * （2026-09-21：実機で、LIFF経由でクイズ本体のページを開くと400エラーになる不具合を修正。
+ *   LINE ID連携（liff.init）はクイズ一覧ページ＝LIFFエンドポイントでしか動かさない。
+ *   手動解放の取得失敗時は、保存済みの解放を消して通常のロック判定に戻す）
+ * （旧履歴）研修クイズ 共通エンジン ver010
  * （2026-09-21：LINEリッチメニュー用に、クイズ一覧とマイ進捗ページの共通ロジック
  *   computeQuizStates/pickNextQuiz/getGoParamを追加。「?go=next」で次の未クリアクイズへ、
  *   「?go=progress」でマイ進捗ページへ移動できる）
@@ -1061,7 +1065,14 @@ function loadLiffSdk() {
 // LINE経由（LIFF）で開かれている時だけ、無言でLINE IDを取得してAirtableに紐づける。
 // 通常のブラウザ・ブックマークから開いた場合はliff.isLoggedIn()がfalseになるので、
 // エラー扱いにせず静かに何もしない（コンソールに一言残すのみ）。
+//
+// 【重要・2026-09-21】LIFFはエンドポイントURL（クイズ一覧のページ）でしか初期化できない。
+// LINEのLIFF画面からクイズ本体のページへ移動した後にliff.init()を呼ぶと、LINEのログイン画面
+// （access.line.me）へ飛ばされて「400 Bad Request」になる（実機で400を確認。原因はこの仕組みによるものと推定。修正後の実機確認が必要）。
+// そのため、この関数はクイズ一覧ページが window.IS_LIFF_ENDPOINT = true を立てた時だけ動く。
+// クイズ本体のページ（登録画面からの呼び出し）では何もしない。連携はクイズ一覧を開いた時に行う。
 async function tryLinkLineId(name, store) {
+  if (!window.IS_LIFF_ENDPOINT) return;
   if (alreadyLineLinked()) return;
   try {
     await loadLiffSdk();
@@ -1090,6 +1101,18 @@ async function tryLinkLineId(name, store) {
   } catch (e) {
     console.log('[LINE連携] スキップ（LINE経由で開いていない可能性）:', e.message);
   }
+}
+
+// クイズ一覧ページ専用：登録済みの氏名・店舗があれば、LINE IDの連携を試みる（最大waitMsだけ待つ）。
+// 「続きから」等でこの後すぐ別ページへ移動する場合に、連携の完了待ちで長く止まらないための上限。
+async function linkLineIdForHub(waitMs) {
+  window.IS_LIFF_ENDPOINT = true;
+  const p = getProfile();
+  if (!p.name || !p.store) return;
+  await Promise.race([
+    tryLinkLineId(p.name, p.store),
+    new Promise(resolve => setTimeout(resolve, waitMs || 2000)),
+  ]);
 }
 
 // Airtableの検索式（filterByFormula）に埋め込む文字列をエスケープする。
