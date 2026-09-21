@@ -204,6 +204,38 @@
   .pill-ok { background: var(--green-tint); color: var(--green); }
   .pill-muted { background: var(--card-line); color: var(--muted); }
 
+  /* ---- 実行チェック ---- */
+  #practiceTable th, #practiceTable td { white-space: nowrap; }
+  #practiceTable .pc-name-col { position: sticky; left: 0; z-index: 3; background: var(--card); }
+  #practiceTable thead .pc-name-col { z-index: 4; background: var(--tiffany-tint); }
+  .pc-cell { text-align: center; font-size: 12px; font-weight: 700; }
+  .pc-all { background: var(--green-tint); color: var(--green); }
+  .pc-part { background: var(--orange-tint); color: var(--orange-deep); }
+  .pc-none { color: var(--muted); }
+  .pc-clickable { cursor: pointer; }
+  .pc-clickable:hover { outline: 2px solid var(--tiffany); outline-offset: -2px; }
+  #practiceNote { display: none; background: var(--orange-tint); color: var(--orange-deep); border-radius: 12px; padding: 10px 14px; font-size: 13px; margin: 0 0 12px; }
+  #practiceModal { display: none; position: fixed; inset: 0; background: hsl(var(--shadow) / 0.45); z-index: 110; align-items: center; justify-content: center; padding: 20px; }
+  #practiceModal.open { display: flex; }
+  #practiceModalCard { background: var(--card); border-radius: 20px; max-width: 620px; width: 100%; max-height: 86vh; overflow-y: auto; padding: 24px 24px 20px; box-shadow: 0 20px 50px -20px hsl(var(--shadow) / 0.5); }
+  #practiceModalCard h3 { font-family: "Fredoka", sans-serif; font-size: 18px; color: var(--tiffany-deep); margin: 0; }
+  #practiceModalCard .modal-sub { color: var(--muted); font-size: 12.5px; margin: 2px 0 14px; }
+  #practiceClose { background: none; border: none; cursor: pointer; font-size: 20px; color: var(--muted); line-height: 1; padding: 4px; float: right; }
+  .pc-fields { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+  .pc-fields label { font-size: 12px; color: var(--ink-soft); display: flex; flex-direction: column; gap: 4px; flex: 1; min-width: 180px; }
+  .pc-fields input { padding: 9px 11px; font-size: 14px; border: 2px solid var(--card-line); border-radius: 10px; outline: none; }
+  .pc-fields input:focus { border-color: var(--tiffany); }
+  .pc-item { border-top: 1px solid var(--card-line); padding: 12px 0; }
+  .pc-item-text { font-size: 14px; margin-bottom: 8px; }
+  .pc-item-btns { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+  .pc-btn { border: 2px solid var(--card-line); background: var(--card); border-radius: 10px; padding: 7px 16px; font-weight: 700; font-size: 13px; cursor: pointer; color: var(--ink-soft); }
+  .pc-btn:hover { border-color: var(--tiffany); }
+  .pc-btn.on-ok { background: var(--green-tint); border-color: var(--green); color: var(--green); }
+  .pc-btn.on-ng { background: var(--orange-tint); border-color: var(--orange-deep); color: var(--orange-deep); }
+  .pc-btn:disabled { opacity: 0.5; cursor: default; }
+  .pc-meta { font-size: 11.5px; color: var(--muted); }
+  #practiceMsg { font-size: 13px; margin-top: 10px; color: var(--red); display: none; }
+
   #loading, #errorBox { text-align: center; padding: 60px 20px; color: var(--muted); }
   #errorBox { color: var(--red); display: none; }
   #content { display: none; }
@@ -287,6 +319,23 @@
   </section>
 
   <section>
+    <h2>✅ 実行チェック（現場で実際にできているか）</h2>
+    <p class="section-desc">クイズに合格した技術を、オーナー・先輩が現場で見て確認します。セルを押すと、そのスタッフ・そのクイズのチェック項目が開きます。数字は「できた項目 / 全項目」です</p>
+    <div id="practiceNote"></div>
+    <div class="table-wrap">
+      <table id="practiceTable">
+        <thead></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="mx-legend">
+      <span><i style="background:var(--green-tint)"></i>全項目できた</span>
+      <span><i style="background:var(--orange-tint)"></i>一部できた</span>
+      <span><i style="background:var(--card-line)"></i>まだ確認していない</span>
+    </div>
+  </section>
+
+  <section>
     <h2>📉 離脱一覧（動画は確認したが、採点まで進んでいない）</h2>
     <p class="section-desc">「確認した」を押してから30分以上、採点が完了していない挑戦を表示します（受講中の可能性がある直近30分は除外）</p>
     <div class="table-wrap">
@@ -336,7 +385,22 @@
 </div>
 
 <!-- 店舗・スタッフのマスタとAirtable接続情報（STORE_OPTIONS / STAFF_BY_STORE / AIRTABLE_*）を使い回す -->
+<div id="practiceModal">
+  <div id="practiceModalCard">
+    <button id="practiceClose" aria-label="閉じる">×</button>
+    <h3 id="practiceTitle"></h3>
+    <p class="modal-sub" id="practiceSub"></p>
+    <div class="pc-fields">
+      <label>確認した人（オーナー・先輩の名前）<input type="text" id="practiceChecker" placeholder="例：Takeshi"></label>
+      <label>メモ（任意・次に押した項目に記録されます）<input type="text" id="practiceMemo" placeholder="例：左足の持ち方はOK"></label>
+    </div>
+    <div id="practiceItems"></div>
+    <div id="practiceMsg"></div>
+  </div>
+</div>
+
 <script src="quiz-engine.js"></script>
+<script src="practice-check.js"></script>
 <script>
 /**
  * 研修クイズ 管理ダッシュボード ver002（2026-09-05）
@@ -1021,6 +1085,165 @@ document.querySelector('#matrixTable tbody').addEventListener('click', async (e)
   }
 });
 
+// ============================================================
+// 実行チェック（現場でできているかの確認）
+// 書き込み：Make「Webhook→Filter(合言葉)→Airtable Create a Record」（テーブル「実行チェックログ」）
+// Webhook URLは、他のURLと同じくbase64にしてある（GitHubの自動検知を避けるためで、秘匿ではない）。
+// 空にすると、画面は開けるが、チェックの記録はできない（「セットアップ待ち」と表示）。
+// 読み取り：手動解放ログと同じく、読み取り専用トークンでAirtableを直接参照する。
+// ============================================================
+const PRACTICE_WEBHOOK_URL = atob("aHR0cHM6Ly9ob29rLnVzMi5tYWtlLmNvbS9oNnZtNWg0azJranFxdWhjNnRmZnlhaHpqNXRuYjFoOA==");
+const PRACTICE_SHARED_SECRET = "oneluke-dash-practice-2026";
+const PRACTICE_CHECKER_KEY = 'practiceChecker';
+
+let practiceState = {};        // computePracticeStateの結果（今の状態）
+let practiceReadable = true;   // 「実行チェックログ」を読めたか
+let practiceStaff = [];        // 一覧に出すスタッフ（staffSummaryの氏名・店舗）
+let practiceOpen = null;       // 今モーダルで開いている { name, store, quizId }
+
+async function fetchPracticeLog() {
+  const fields = ['氏名', '所属店舗', 'クイズID', '項目ID', '結果', '確認者', 'メモ', '日時'];
+  let all = [];
+  let offset;
+  do {
+    const params = new URLSearchParams({ pageSize: '100' });
+    fields.forEach(f => params.append('fields[]', f));
+    if (offset) params.append('offset', offset);
+    const url = `https://api.airtable.com/v0/${AIRTABLE_BASE_ID}/${encodeURIComponent(PRACTICE_TABLE_NAME)}?${params.toString()}`;
+    const res = await fetch(url, { headers: { Authorization: `Bearer ${AIRTABLE_READONLY_TOKEN}` } });
+    if (!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    all = all.concat((data.records || []).map(r => r.fields));
+    offset = data.offset;
+  } while (offset);
+  return all;
+}
+
+async function sendPracticeEvent(payload) {
+  const res = await fetch(PRACTICE_WEBHOOK_URL, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(Object.assign({ 合言葉: PRACTICE_SHARED_SECRET }, payload)),
+  });
+  if (!res.ok) throw new Error('送信失敗: status ' + res.status);
+}
+
+function practiceNoteText() {
+  if (!practiceReadable) return '「実行チェックログ」のテーブルがAirtableに見つからないため、この機能はまだ使えません（セットアップ待ち）。';
+  if (!PRACTICE_WEBHOOK_URL) return 'チェックの記録用のWebhookがまだ設定されていません（セットアップ待ち）。現在は表示だけできます。';
+  return '';
+}
+
+function renderPracticeTable() {
+  const note = document.getElementById('practiceNote');
+  const text = practiceNoteText();
+  note.textContent = text;
+  note.style.display = text ? 'block' : 'none';
+
+  document.querySelector('#practiceTable thead').innerHTML =
+    '<tr><th class="pc-name-col">氏名</th>' + PRACTICE_CHECKLIST.map(q => `<th>${escapeHtml(q.title)}</th>`).join('') + '<th class="num">全項目できた</th></tr>';
+
+  const canOpen = practiceReadable;
+  const summary = practiceSummary(practiceState, practiceStaff, PRACTICE_CHECKLIST);
+  document.querySelector('#practiceTable tbody').innerHTML = summary.map(row => {
+    const cells = row.per.map((p, i) => {
+      const cls = p.complete ? 'pc-all' : (p.done > 0 ? 'pc-part' : 'pc-none');
+      const q = PRACTICE_CHECKLIST[i];
+      const data = canOpen ? ` data-name="${escapeHtml(row.name)}" data-store="${escapeHtml(row.store)}" data-quizid="${escapeHtml(q.quizId)}"` : '';
+      return `<td class="pc-cell ${cls}${canOpen ? ' pc-clickable' : ''}"${data}>${p.done} / ${p.total}</td>`;
+    }).join('');
+    return `<tr><td class="pc-name-col">${escapeHtml(row.name)}</td>${cells}<td class="num">${row.completeQuizzes} / ${PRACTICE_CHECKLIST.length}</td></tr>`;
+  }).join('');
+}
+
+function formatPracticeMeta(s) {
+  if (!s) return '未確認';
+  const d = s.at ? new Date(s.at) : null;
+  const when = d && !isNaN(d.getTime()) ? `${d.getMonth() + 1}/${d.getDate()}` : '';
+  return [when, s.checker ? `${s.checker}さん` : '', s.memo].filter(Boolean).join('・') || '確認済み';
+}
+
+function renderPracticeModal() {
+  if (!practiceOpen) return;
+  const { name, store, quizId } = practiceOpen;
+  const quiz = PRACTICE_CHECKLIST.find(q => q.quizId === quizId);
+  const prog = practiceProgress(practiceState, name, store, quiz);
+  document.getElementById('practiceTitle').textContent = `${name}さん ／ ${quiz.title}`;
+  document.getElementById('practiceSub').textContent = `${prog.done} / ${prog.total} 項目できた`;
+  const canWrite = !!PRACTICE_WEBHOOK_URL;
+  document.getElementById('practiceItems').innerHTML = quiz.items.map(item => {
+    const st = practiceState[practiceKey(name, store, quizId, item.id)];
+    const ok = st && st.result === 'できた';
+    const ng = st && st.result === 'まだ';
+    return `<div class="pc-item">
+      <div class="pc-item-text">${escapeHtml(item.text)}</div>
+      <div class="pc-item-btns">
+        <button class="pc-btn${ok ? ' on-ok' : ''}" data-item="${item.id}" data-result="できた"${canWrite ? '' : ' disabled'}>✓ できた</button>
+        <button class="pc-btn${ng ? ' on-ng' : ''}" data-item="${item.id}" data-result="まだ"${canWrite ? '' : ' disabled'}>まだ</button>
+        <span class="pc-meta">${escapeHtml(formatPracticeMeta(st))}</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setPracticeMsg(text) {
+  const el = document.getElementById('practiceMsg');
+  el.textContent = text || '';
+  el.style.display = text ? 'block' : 'none';
+}
+
+function openPracticeModal(name, store, quizId) {
+  practiceOpen = { name, store, quizId };
+  let saved = '';
+  try { saved = localStorage.getItem(PRACTICE_CHECKER_KEY) || ''; } catch (e) {}
+  document.getElementById('practiceChecker').value = saved;
+  document.getElementById('practiceMemo').value = '';
+  setPracticeMsg('');
+  renderPracticeModal();
+  document.getElementById('practiceModal').classList.add('open');
+}
+
+function closePracticeModal() {
+  practiceOpen = null;
+  document.getElementById('practiceModal').classList.remove('open');
+}
+
+document.getElementById('practiceClose').addEventListener('click', closePracticeModal);
+document.getElementById('practiceModal').addEventListener('click', (e) => { if (e.target.id === 'practiceModal') closePracticeModal(); });
+
+document.querySelector('#practiceTable tbody').addEventListener('click', (e) => {
+  const cell = e.target.closest('td.pc-clickable');
+  if (!cell) return;
+  openPracticeModal(cell.dataset.name, cell.dataset.store, cell.dataset.quizid);
+});
+
+document.getElementById('practiceItems').addEventListener('click', async (e) => {
+  const btn = e.target.closest('button.pc-btn');
+  if (!btn || !practiceOpen || !PRACTICE_WEBHOOK_URL) return;
+  const checker = document.getElementById('practiceChecker').value.trim();
+  if (!checker) { setPracticeMsg('「確認した人」の名前を入れてください（誰が見て確認したかを残すため）'); return; }
+  try { localStorage.setItem(PRACTICE_CHECKER_KEY, checker); } catch (err) {}
+  const { name, store, quizId } = practiceOpen;
+  const quiz = PRACTICE_CHECKLIST.find(q => q.quizId === quizId);
+  const item = quiz.items.find(i => i.id === btn.dataset.item);
+  const memo = document.getElementById('practiceMemo').value.trim();
+  setPracticeMsg('');
+  const buttons = document.querySelectorAll('#practiceItems button.pc-btn');
+  buttons.forEach(b => { b.disabled = true; });
+  try {
+    const event = buildPracticeEvent(name, store, quiz, item, btn.dataset.result, checker, memo);
+    await sendPracticeEvent(event);
+    // 送信できたら、画面の状態にも先に反映する（Airtableへの反映を待たずに見えるように）
+    practiceState[practiceKey(name, store, quizId, item.id)] = { result: event.結果, checker, memo, at: event.日時 };
+    document.getElementById('practiceMemo').value = '';
+    renderPracticeModal();
+    renderPracticeTable();
+  } catch (err) {
+    setPracticeMsg('記録に失敗しました：' + err.message);
+    buttons.forEach(b => { b.disabled = false; });
+  }
+});
+
 async function loadDashboard() {
   document.getElementById('loading').style.display = 'block';
   document.getElementById('errorBox').style.display = 'none';
@@ -1058,6 +1281,18 @@ async function loadDashboard() {
     renderWeaknessTable(weakness);
     renderDropoffTable(dropoffStats.confirmedDropoffs);
     renderMatrix(matrix, manualUnlockAvailable);
+
+    // 「実行チェックログ」もまだAirtable側に無い可能性がある。読めなくてもダッシュボード全体は壊さない。
+    practiceStaff = staffSummary.map(s => ({ name: s.name, store: s.store }));
+    try {
+      practiceState = computePracticeState(await fetchPracticeLog());
+      practiceReadable = true;
+    } catch (e) {
+      practiceState = {};
+      practiceReadable = false;
+      console.warn('[ダッシュボード] 「実行チェックログ」テーブルが見つからないため、実行チェックは表示のみになります:', e.message);
+    }
+    renderPracticeTable();
 
     document.getElementById('loading').style.display = 'none';
     document.getElementById('content').style.display = 'block';
