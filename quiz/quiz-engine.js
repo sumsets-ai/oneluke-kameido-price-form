@@ -1,5 +1,9 @@
 /**
- * 研修クイズ 共通エンジン ver009
+ * 研修クイズ 共通エンジン ver010
+ * （2026-09-21：LINEリッチメニュー用に、クイズ一覧とマイ進捗ページの共通ロジック
+ *   computeQuizStates/pickNextQuiz/getGoParamを追加。「?go=next」で次の未クリアクイズへ、
+ *   「?go=progress」でマイ進捗ページへ移動できる）
+ * （旧履歴）研修クイズ 共通エンジン ver009
  * （2026-09-06：離脱率・所要時間の集計精度を上げるため、「開始」と「完了」イベントに
  *   共通の試行ID（1回の挑戦を貫通するID。送信ID＝各メッセージ自体の識別用とは別物）を追加。
  *   これにより、同じ人が同じクイズを複数回開始した場合でも、どの開始がどの完了に対応するかを
@@ -194,6 +198,9 @@ async function syncManualUnlocks() {
     const records = await fetchManualUnlocks(name, store);
     applyManualUnlocks(computeUnlockedQuizIds(records));
   } catch (e) {
+    // 取得できない間に、以前保存した解放状態が残っていると、管理者が取り消したクイズも
+    // 解放されたままになる。通信障害中は「通常のロック判定のみ」に倒すため、保存済みの解放は消す。
+    clearManualUnlocks();
     console.log('[手動解放] 取得できなかったため通常のロック判定のみで表示します:', e.message);
   }
 }
@@ -896,6 +903,51 @@ function isPerfectCleared(quizId) {
     return localStorage.getItem(statsKey('quizPerfect:' + quizId)) === '1';
   } catch (e) {
     return false;
+  }
+}
+
+// ============================================================
+// クイズ一覧・マイ進捗ページの共通ロジック
+// quizzes: 表示順に並べた [{ title, category, file, count }]（クイズ一覧.htmlのQUIZZESと同じ形）。
+// カテゴリごとに「直前の1本をクリアするまで次は挑戦不可」。管理者が手動解放したものは例外として開く。
+// 判定はファイル名（拡張子なし）＝各クイズのquiz_idで行う。
+// ============================================================
+function computeQuizStates(quizzes) {
+  const lastClearedInCategory = {};
+  return quizzes.map(quiz => {
+    const quizId = quiz.file.replace(/\.html$/, '');
+    const cleared = isCleared(quizId);
+    const isFirstInCategory = !(quiz.category in lastClearedInCategory);
+    const wouldBeLockedBySequence = !isFirstInCategory && !lastClearedInCategory[quiz.category];
+    const manuallyUnlocked = isManuallyUnlocked(quizId);
+    lastClearedInCategory[quiz.category] = cleared;
+    return {
+      quiz, quizId, cleared,
+      perfect: isPerfectCleared(quizId),
+      wouldBeLockedBySequence, manuallyUnlocked,
+      locked: wouldBeLockedBySequence && !manuallyUnlocked,
+    };
+  });
+}
+
+// 「続きから」で開くクイズ＝表示順で最初の、挑戦できる（ロックされていない）未クリアのクイズ。全部クリア済みならnull。
+function pickNextQuiz(states) {
+  return states.find(s => !s.locked && !s.cleared) || null;
+}
+
+// リッチメニューなどから「?go=next」「?go=progress」付きで開かれた時の行き先を返す。
+// LINEのLIFF経由で開くとクエリが「liff.state」パラメータの中に入って届くことがあるので、両方を見る。
+function getGoParam() {
+  try {
+    const params = new URLSearchParams(location.search);
+    let go = params.get('go');
+    if (!go) {
+      const state = params.get('liff.state');
+      if (state) go = new URLSearchParams(state.slice(state.indexOf('?') + 1)).get('go');
+    }
+    return go || '';
+  } catch (e) {
+    return '';
   }
 }
 
